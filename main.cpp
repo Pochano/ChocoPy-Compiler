@@ -49,8 +49,11 @@ int main(int argc, char* argv[]) {
         std::vector<Token> tokens = scanner.scan();
 
         if (scanner.hasError()) {
-            std::cerr << "[ERROR SCANNER] Se encontraron errores lexicos.\n";
+            std::cout << "\n[ERROR SCANNER] Se encontraron errores lexicos. "
+                        "Se omite el analisis sintactico.\n";
+            return 1;
         }
+
 
         // --- CAMBIO: Ejecución del Parser ---
         // Le pasamos los tokens al parser usando la nueva función con seguimiento (Trace)

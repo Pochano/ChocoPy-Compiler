@@ -30,7 +30,6 @@ def procesar_datos(limite: int) -> int:
 
 def main():
     res: int = 0
-    res = procesar_datos(3)
-    print(res)
+    res = procesar_datos(3)&
 
 main()
