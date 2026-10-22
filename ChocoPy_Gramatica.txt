@@ -1,0 +1,114 @@
+program -> decl_list stmt_plus
+program -> decl_list
+
+decl_list -> decl_list decl_item
+decl_list -> ''
+decl_item -> var_def
+decl_item -> func_def
+decl_item -> class_def
+
+class_def -> class ID ( ID ) : NEWLINE INDENT class_body DEDENT
+class_body -> pass NEWLINE
+class_body -> class_item_list
+class_item_list -> class_item_list class_item
+class_item_list -> class_item
+class_item -> var_def
+class_item -> func_def
+
+func_def -> def ID ( params_opt ) ret_opt : NEWLINE INDENT func_body DEDENT
+params_opt -> params
+params_opt -> ''
+params -> typed_var
+params -> params , typed_var
+ret_opt -> -> type
+ret_opt -> ''
+func_body -> func_decl_list stmt_plus
+func_decl_list -> func_decl_list func_decl
+func_decl_list -> ''
+func_decl -> global_decl
+func_decl -> nonlocal_decl
+func_decl -> var_def
+func_decl -> func_def
+
+typed_var -> ID : type
+type -> ID
+type -> IDSTRING
+type -> [ type ]
+global_decl -> global ID NEWLINE
+nonlocal_decl -> nonlocal ID NEWLINE
+var_def -> typed_var = literal NEWLINE
+
+stmt_plus -> stmt_plus stmt
+stmt_plus -> stmt
+stmt -> simple_stmt NEWLINE
+stmt -> if expr : block elif_list else_opt
+stmt -> while expr : block
+stmt -> for ID in expr : block
+elif_list -> elif_list elif expr : block
+elif_list -> ''
+else_opt -> else : block
+else_opt -> ''
+block -> NEWLINE INDENT stmt_plus DEDENT
+
+simple_stmt -> pass
+simple_stmt -> expr
+simple_stmt -> return expr_opt
+simple_stmt -> assign_list expr
+assign_list -> assign_list target =
+assign_list -> target =
+expr_opt -> expr
+expr_opt -> ''
+
+literal -> None
+literal -> True
+literal -> False
+literal -> INTEGER
+literal -> IDSTRING
+literal -> STRING
+
+expr -> or_expr
+expr -> or_expr if or_expr else expr
+or_expr -> or_expr or and_expr
+or_expr -> and_expr
+and_expr -> and_expr and not_expr
+and_expr -> not_expr
+not_expr -> not not_expr
+not_expr -> cmp_expr
+cmp_expr -> arith cmp_op arith
+cmp_expr -> arith
+cmp_op -> ==
+cmp_op -> !=
+cmp_op -> <=
+cmp_op -> >=
+cmp_op -> <
+cmp_op -> >
+cmp_op -> is
+arith -> arith + term
+arith -> arith - term
+arith -> term
+term -> term * unary
+term -> term // unary
+term -> term % unary
+term -> unary
+unary -> - unary
+unary -> primary
+
+primary -> ID
+primary -> literal
+primary -> [ expr_list_opt ]
+primary -> ( expr )
+primary -> member_expr
+primary -> index_expr
+primary -> member_expr ( expr_list_opt )
+primary -> ID ( expr_list_opt )
+member_expr -> primary . ID
+index_expr -> primary [ expr ]
+
+expr_list_opt -> expr_list
+expr_list_opt -> ''
+expr_list -> expr
+expr_list -> expr_list , expr
+
+target -> ID
+target -> member_expr
+target -> index_expr
