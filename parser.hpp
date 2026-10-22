@@ -8,10 +8,6 @@
 #include <deque>
 #include <iostream>
 
-// --- CAMBIO: Estructura Token ---
-// Explicación: Antes pasábamos simples strings. Ahora guardamos el nombre, lexema, línea y columna 
-// para poder decirle al usuario exactamente dónde se equivocó.
-
 struct Token {
     std::string token_name;
     std::string lexeme;
@@ -80,6 +76,7 @@ class LR1Builder {
 public:
     Grammar g;
     std::map<int, std::set<int>> first_sets;
+    std::map<int, std::set<int>> follow_sets;
 
     std::vector<std::set<Item>> CC;
     std::map<int, std::set<Item>> cc_kernels;
@@ -93,6 +90,7 @@ public:
     LR1Builder(const Grammar& grammar);
 
     void first();
+    void follow();
     std::set<int> firstCadena(const std::vector<int>& beta) const;
     std::set<Item> closure(const std::set<Item>& s);
     std::set<Item> gotoState(const std::set<Item>& s, int x);
@@ -103,13 +101,11 @@ public:
     void printClosureTable() const;
     void printLRTable() const;
 
-    // --- CAMBIO: Nuevas funciones declaradas ---
-    // Métodos para guardar/cargar la tabla LR(1) en un archivo binario/texto
+    // Métodos actualizados para guardar/cargar la tabla usando nombres de símbolos
     bool saveTable(const std::string& filename) const;
     bool loadTable(const std::string& filename);
 
-    // Método para parsear tokens con tabla de seguimiento y modo pánico
-    bool parseTokensWithTrace(const std::vector<Token>& tokens) const;
+    bool parseTokensWithTrace(const std::vector<Token>& tokens);
 };
 
 #endif

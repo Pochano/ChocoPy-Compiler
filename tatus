@@ -1,0 +1,2494 @@
+[1mdiff --git a/Compilador_Chocopy.exe b/Compilador_Chocopy.exe[m
+[1mdeleted file mode 100644[m
+[1mindex 2ae121b..0000000[m
+Binary files a/Compilador_Chocopy.exe and /dev/null differ
+[1mdiff --git a/Test_1.txt b/Test_1.txt[m
+[1mindex 4de8873..f1dd12e 100644[m
+[1m--- a/Test_1.txt[m
+[1m+++ b/Test_1.txt[m
+[36m@@ -1,35 +1,4 @@[m
+[31m-class Calculadora(object):[m
+[31m-    base: int = 2[m
+[31m-[m
+[31m-    def potencia(self: object, exp: int) -> int:[m
+[31m-        res: int = 1[m
+[31m-        i: int = 0[m
+[31m-        while i < exp:[m
+[31m-            res = res * self.base[m
+[31m-            i = i + 1[m
+[31m-        return res[m
+[31m-[m
+[31m-def procesar_datos(limite: int) -> int:[m
+[31m-    calc: Calculadora = None[m
+[31m-    total: int = 0[m
+[31m-    n: int = 0[m
+[31m-    lista: [int] = None[m
+[31m-    [m
+[31m-    calc = Calculadora()[m
+[31m-    lista = [1, 2, 3, 4][m
+[31m-    [m
+[31m-    for n in lista:[m
+[31m-        if n > limite:[m
+[31m-            pass[m
+[31m-        elif n == limite:[m
+[31m-            total = total + calc.potencia(n)[m
+[31m-        else:[m
+[31m-            total = total + n[m
+[31m-            [m
+[31m-    return total[m
+[31m-[m
+[31m-def main():[m
+[31m-    res: int = 0[m
+[31m-    res = procesar_datos(3)&[m
+[31m-[m
+[31m-main()[m
+\ No newline at end of file[m
+[32m+[m[32mdef sumar(a: int) -> int:[m
+[32m+[m[32m    x: int = 1[m
+[32m+[m[32m    return a + 1[m
+[32m+[m[32m    if True:[m
+\ No newline at end of file[m
+[1mdiff --git a/main.cpp b/main.cpp[m
+[1mindex 4b05cc0..7ed6292 100644[m
+[1m--- a/main.cpp[m
+[1m+++ b/main.cpp[m
+[36m@@ -1,5 +1,5 @@[m
+ #include "parser.hpp"[m
+[31m-#include "scanner.hpp" // --- CAMBIO: Incluimos el Scanner ---[m
+[32m+[m[32m#include "scanner.hpp"[m
+ #include <iostream>[m
+ #include <string>[m
+ [m
+[36m@@ -7,7 +7,6 @@[m [mint main(int argc, char* argv[]) {[m
+     std::string grammar_file = "Chocopy_Gramatica.txt";[m
+     std::string source_file = "";[m
+ [m
+[31m-    // --- CAMBIO: Ahora aceptamos el archivo de código fuente como primer argumento ---[m
+     if (argc > 1) {[m
+         source_file = argv[1];[m
+     }[m
+[36m@@ -16,12 +15,10 @@[m [mint main(int argc, char* argv[]) {[m
+     }[m
+ [m
+     try {[m
+[32m+[m[32m        // Inicializamos siempre la gramática primero para cargar la simbología[m
+         Grammar grammar = Grammar::fromFile(grammar_file);[m
+         LR1Builder builder(grammar);[m
+ [m
+[31m-        // --- CAMBIO: Sistema de Caché para la Tabla LR(1) ---[m
+[31m-        // Explicación: Calcular la tabla LR(1) tarda mucho. Aquí intentamos cargarla de un archivo (.dat).[m
+[31m-        // Si no existe, la generamos desde cero y la guardamos para la próxima vez.[m
+         std::string table_cache = "tabla_chocopy.dat";[m
+         if (!builder.loadTable(table_cache)) {[m
+             std::cout << "[INFO] Generando coleccion canonica y tabla LR(1)...\n";[m
+[36m@@ -30,11 +27,11 @@[m [mint main(int argc, char* argv[]) {[m
+             if (!builder.llenarTablas()) {[m
+                 std::cerr << "[ADVERTENCIA] Se detectaron conflictos en la tabla LR(1).\n";[m
+             }[m
+[31m-            builder.saveTable(table_cache); // Guardamos la tabla[m
+[32m+[m[32m            builder.saveTable(table_cache);[m
+             std::cout << "[INFO] Tabla guardada exitosamente en '" << table_cache << "'.\n";[m
+         } else {[m
+             std::cout << "[INFO] Tabla LR(1) cargada desde archivo de almacenamiento.\n";[m
+[31m-            builder.first(); // Necesario para imprimir FIRST si viene del caché[m
+[32m+[m[32m            builder.first();[m
+         }[m
+ [m
+         if (source_file.empty()) {[m
+[36m@@ -42,8 +39,6 @@[m [mint main(int argc, char* argv[]) {[m
+             return 0;[m
+         }[m
+ [m
+[31m-        // --- CAMBIO: Ejecución del Scanner ---[m
+[31m-        // Leemos el código y generamos la lista de tokens[m
+         std::cout << "[INFO] Ejecutando Scanner sobre: " << source_file << "...\n";[m
+         Scanner scanner(source_file);[m
+         std::vector<Token> tokens = scanner.scan();[m
+[36m@@ -54,14 +49,13 @@[m [mint main(int argc, char* argv[]) {[m
+             return 1;[m
+         }[m
+ [m
+[31m-[m
+[31m-        // --- CAMBIO: Ejecución del Parser ---[m
+[31m-        // Le pasamos los tokens al parser usando la nueva función con seguimiento (Trace)[m
+         std::cout << "[INFO] Iniciando analisis sintactico...\n";[m
+         bool ok = builder.parseTokensWithTrace(tokens);[m
+ [m
+[32m+[m[41m        [m
+         if (ok) {[m
+             std::cout << "\n[EXITO] Analisis finalizado sin errores.\n";[m
+[32m+[m[32m             builder.printClosureTable();[m
+         } else {[m
+             std::cout << "\n[CON ERRORES] El archivo contiene errores sintacticos.\n";[m
+         }[m
+[1mdiff --git a/parser.cpp b/parser.cpp[m
+[1mindex 30d05bf..80ad8de 100644[m
+[1m--- a/parser.cpp[m
+[1m+++ b/parser.cpp[m
+[36m@@ -79,7 +79,6 @@[m [mGrammar Grammar::fromString(const std::string& text) {[m
+         }[m
+         g.getOrAddSymbol(lhs, true);[m
+ [m
+[31m-        // Protect || in rhs[m
+         size_t pos = 0;[m
+         while ((pos = rhs_all.find("||", pos)) != std::string::npos) {[m
+             rhs_all.replace(pos, 2, "__OR__");[m
+[36m@@ -99,7 +98,6 @@[m [mGrammar Grammar::fromString(const std::string& text) {[m
+             std::string sym;[m
+             while (ass >> sym) {[m
+                 if (sym == "''" || sym == "ε" || sym == "EPS") {[m
+[31m-                    // Empty RHS[m
+                 } else if (!sym.empty()) {[m
+                     syms.push_back(sym);[m
+                 }[m
+[36m@@ -131,7 +129,7 @@[m [mGrammar Grammar::fromString(const std::string& text) {[m
+     for (size_t i = 0; i < raw_rules.size(); ++i) {[m
+         const auto& rr = raw_rules[i];[m
+         if (i == 0 && rr.lhs == g.getSymbolName(g.goal_id)) {[m
+[31m-            continue; // Already added as rule 0[m
+[32m+[m[32m            continue;[m
+         }[m
+         int lhs_id = g.getOrAddSymbol(rr.lhs, true);[m
+         std::vector<int> rhs_ids;[m
+[36m@@ -145,7 +143,6 @@[m [mGrammar Grammar::fromString(const std::string& text) {[m
+         g.prods[r.lhs].push_back(r);[m
+     }[m
+ [m
+[31m-    // Determine symbol appearance order (excluding Goal)[m
+     std::vector<int> appearance;[m
+     auto add_app = [&](int sym_id) {[m
+         if (sym_id == g.goal_id || sym_id == g.eps_id) return;[m
+[36m@@ -154,14 +151,12 @@[m [mGrammar Grammar::fromString(const std::string& text) {[m
+         }[m
+     };[m
+ [m
+[31m-    // First add nonterminals in order of appearance[m
+     for (const auto& r : g.rules) {[m
+         if (r.lhs != g.goal_id) add_app(r.lhs);[m
+         for (int s : r.rhs) {[m
+             if (g.nonterminal_ids.count(s)) add_app(s);[m
+         }[m
+     }[m
+[31m-    // Then add terminals in order of appearance[m
+     for (const auto& r : g.rules) {[m
+         for (int s : r.rhs) {[m
+             if (g.terminal_ids.count(s)) add_app(s);[m
+[36m@@ -227,6 +222,62 @@[m [mvoid LR1Builder::first() {[m
+     }[m
+ }[m
+ [m
+[32m+[m[32mvoid LR1Builder::follow() {[m
+[32m+[m[32m    follow_sets.clear();[m
+[32m+[m
+[32m+[m[32m    for (int nt : g.nonterminal_ids) {[m
+[32m+[m[32m        follow_sets[nt] = {};[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    // El símbolo inicial recibe EOF en su FOLLOW.[m
+[32m+[m[32m    follow_sets[g.goal_id].insert(g.eof_id);[m
+[32m+[m
+[32m+[m[32m    bool changed = true;[m
+[32m+[m
+[32m+[m[32m    while (changed) {[m
+[32m+[m[32m        changed = false;[m
+[32m+[m
+[32m+[m[32m        for (const auto& r : g.rules) {[m
+[32m+[m[32m            for (size_t i = 0; i < r.rhs.size(); ++i) {[m
+[32m+[m[32m                int B = r.rhs[i];[m
+[32m+[m
+[32m+[m[32m                if (!g.nonterminal_ids.count(B)) {[m
+[32m+[m[32m                    continue;[m
+[32m+[m[32m                }[m
+[32m+[m
+[32m+[m[32m                std::vector<int> beta([m
+[32m+[m[32m                    r.rhs.begin() + i + 1,[m
+[32m+[m[32m                    r.rhs.end()[m
+[32m+[m[32m                );[m
+[32m+[m
+[32m+[m[32m                std::set<int> first_beta = firstCadena(beta);[m
+[32m+[m[32m                size_t old_size = follow_sets[B].size();[m
+[32m+[m
+[32m+[m[32m                for (int symbol : first_beta) {[m
+[32m+[m[32m                    if (symbol != g.eps_id) {[m
+[32m+[m[32m                        follow_sets[B].insert(symbol);[m
+[32m+[m[32m                    }[m
+[32m+[m[32m                }[m
+[32m+[m
+[32m+[m[32m                // Si beta puede producir epsilon, agregar FOLLOW(A).[m
+[32m+[m[32m                if (beta.empty() ||[m
+[32m+[m[32m                    first_beta.count(g.eps_id)) {[m
+[32m+[m[32m                    std::set<int> follow_A = follow_sets[r.lhs];[m
+[32m+[m
+[32m+[m[32m                    follow_sets[B].insert([m
+[32m+[m[32m                        follow_A.begin(),[m
+[32m+[m[32m                        follow_A.end()[m
+[32m+[m[32m                    );[m
+[32m+[m[32m                }[m
+[32m+[m
+[32m+[m[32m                if (follow_sets[B].size() != old_size) {[m
+[32m+[m[32m                    changed = true;[m
+[32m+[m[32m                }[m
+[32m+[m[32m            }[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m[32m}[m
+[32m+[m
+ std::set<int> LR1Builder::firstCadena(const std::vector<int>& beta) const {[m
+     std::set<int> res;[m
+     if (beta.empty()) {[m
+[36m@@ -407,155 +458,24 @@[m [mbool LR1Builder::llenarTablas() {[m
+     return ok;[m
+ }[m
+ [m
+[31m-static std::string formatItemsGrouped(const Grammar& g, const std::set<Item>& items) {[m
+[31m-    typedef std::pair<int, int> CoreKey; // rule_id, dot[m
+[31m-    std::map<CoreKey, std::set<int>> grouped;[m
+[31m-[m
+[31m-    for (const auto& it : items) {[m
+[31m-        grouped[{it.rule_id, it.dot}].insert(it.la_id);[m
+[31m-    }[m
+[31m-[m
+[31m-    std::string result = "{";[m
+[31m-    bool first = true;[m
+[31m-    for (const auto& kv : grouped) {[m
+[31m-        if (!first) result += "; ";[m
+[31m-        first = false;[m
+[31m-[m
+[31m-        const Rule& r = g.rules[kv.first.first];[m
+[31m-        int dot = kv.first.second;[m
+[31m-[m
+[31m-        std::string rhs_str = "";[m
+[31m-        for (int k = 0; k < (int)r.rhs.size(); ++k) {[m
+[31m-            if (k == dot) rhs_str += ".";[m
+[31m-            else rhs_str += g.getSymbolName(r.rhs[k]);[m
+[31m-            if (k + 1 < (int)r.rhs.size() || k == dot) rhs_str += " ";[m
+[31m-        }[m
+[31m-        if (dot == (int)r.rhs.size()) rhs_str += ".";[m
+[31m-        rhs_str = trim(rhs_str);[m
+[31m-        if (rhs_str.empty()) rhs_str = ".";[m
+[31m-[m
+[31m-        std::string las_str = "";[m
+[31m-        bool first_la = true;[m
+[31m-        for (int la : kv.second) {[m
+[31m-            if (!first_la) las_str += "/";[m
+[31m-            first_la = false;[m
+[31m-            las_str += g.getSymbolName(la);[m
+[31m-        }[m
+[31m-[m
+[31m-        result += "[" + g.getSymbolName(r.lhs) + " -> " + rhs_str + ", " + las_str + "]";[m
+[31m-    }[m
+[31m-    result += "}";[m
+[31m-    return result;[m
+[31m-}[m
+[31m-[m
+[31m-void LR1Builder::printFirstTable() const {[m
+[31m-    std::cout << "\nFIRST table" << std::endl;[m
+[31m-    std::cout << "-------------------------" << std::endl;[m
+[31m-    std::cout << std::left << std::setw(14) << "Symbol" << " | FIRST" << std::endl;[m
+[31m-    std::cout << "-------------------------" << std::endl;[m
+[31m-[m
+[31m-    for (int s_id : g.symbol_appearance_order) {[m
+[31m-        auto it = first_sets.find(s_id);[m
+[31m-        if (it != first_sets.end()) {[m
+[31m-            std::cout << std::left << std::setw(14) << g.getSymbolName(s_id) << " | {";[m
+[31m-            bool f = true;[m
+[31m-            for (int la : it->second) {[m
+[31m-                if (!f) std::cout << ", ";[m
+[31m-                f = false;[m
+[31m-                std::cout << g.getSymbolName(la);[m
+[31m-            }[m
+[31m-            std::cout << "}" << std::endl;[m
+[31m-        }[m
+[31m-    }[m
+[31m-    std::cout << "-------------------------" << std::endl;[m
+[31m-}[m
+[31m-[m
+[31m-void LR1Builder::printClosureTable() const {[m
+[31m-    std::cout << "\n==================================================" << std::endl;[m
+[31m-    std::cout << "                LR(1) closure table               " << std::endl;[m
+[31m-    std::cout << "==================================================" << std::endl;[m
+[31m-[m
+[31m-    std::cout << std::left << std::setw(12) << "Goto"[m
+[31m-              << " | " << std::setw(28) << "Kernel"[m
+[31m-              << " | " << std::setw(6) << "State"[m
+[31m-              << " | " << "Closure" << std::endl;[m
+[31m-    std::cout << "--------------------------------------------------------------------------------" << std::endl;[m
+[31m-[m
+[31m-    for (size_t s = 0; s < CC.size(); ++s) {[m
+[31m-        std::string goto_str = cc_gotos.at(s);[m
+[31m-        std::string kernel_str = formatItemsGrouped(g, cc_kernels.at(s));[m
+[31m-        std::string closure_str = formatItemsGrouped(g, CC[s]);[m
+[31m-[m
+[31m-        std::cout << std::left << std::setw(12) << goto_str[m
+[31m-                  << " | " << std::setw(28) << kernel_str[m
+[31m-                  << " | " << std::setw(6) << s[m
+[31m-                  << " | " << closure_str << std::endl;[m
+[31m-    }[m
+[31m-}[m
+[31m-[m
+[31m-void LR1Builder::printLRTable() const {[m
+[31m-    std::vector<int> term_cols;[m
+[31m-    for (int s : g.symbol_appearance_order) {[m
+[31m-        if (g.terminal_ids.count(s)) term_cols.push_back(s);[m
+[31m-    }[m
+[31m-    if (std::find(term_cols.begin(), term_cols.end(), g.eof_id) == term_cols.end()) {[m
+[31m-        term_cols.insert(term_cols.begin(), g.eof_id);[m
+[31m-    }[m
+[31m-[m
+[31m-    std::vector<int> nt_cols;[m
+[31m-    for (int s : g.symbol_appearance_order) {[m
+[31m-        if (g.nonterminal_ids.count(s) && s != g.goal_id) nt_cols.push_back(s);[m
+[31m-    }[m
+[31m-[m
+[31m-    std::cout << "\n=========================================" << std::endl;[m
+[31m-    std::cout << "                LR table                 " << std::endl;[m
+[31m-    std::cout << "=========================================" << std::endl;[m
+[31m-[m
+[31m-    std::cout << std::left << std::setw(6) << "Estado" << " | ";[m
+[31m-    for (int t : term_cols) {[m
+[31m-        std::cout << std::setw(6) << g.getSymbolName(t);[m
+[31m-    }[m
+[31m-    std::cout << " | ";[m
+[31m-    for (int nt : nt_cols) {[m
+[31m-        std::cout << std::setw(6) << g.getSymbolName(nt);[m
+[31m-    }[m
+[31m-    std::cout << std::endl;[m
+[31m-[m
+[31m-    std::cout << "---------------------------------------------------------" << std::endl;[m
+[31m-[m
+[31m-    for (size_t s = 0; s < CC.size(); ++s) {[m
+[31m-        std::cout << std::left << std::setw(6) << s << " | ";[m
+[31m-        for (int t : term_cols) {[m
+[31m-            auto it = Action.find({(int)s, t});[m
+[31m-            std::string val = (it != Action.end()) ? it->second : "";[m
+[31m-            std::cout << std::setw(6) << val;[m
+[31m-        }[m
+[31m-        std::cout << " | ";[m
+[31m-        for (int nt : nt_cols) {[m
+[31m-            auto it = Goto.find({(int)s, nt});[m
+[31m-            std::string val = (it != Goto.end()) ? std::to_string(it->second) : "";[m
+[31m-            std::cout << std::setw(6) << val;[m
+[31m-        }[m
+[31m-        std::cout << std::endl;[m
+[31m-    }[m
+[31m-}[m
+[31m-[m
+[32m+[m[32m// Guarda la tabla escribiendo el NOMBRE del símbolo[m
+ bool LR1Builder::saveTable(const std::string& filename) const {[m
+     std::ofstream out(filename);[m
+     if (!out.is_open()) return false;[m
+ [m
+     out << Action.size() << "\n";[m
+     for (const auto& kv : Action) {[m
+[31m-        out << kv.first.first << " " << kv.first.second << " " << kv.second << "\n";[m
+[32m+[m[32m        out << kv.first.first << " " << g.getSymbolName(kv.first.second) << " " << kv.second << "\n";[m
+     }[m
+ [m
+     out << Goto.size() << "\n";[m
+     for (const auto& kv : Goto) {[m
+[31m-        out << kv.first.first << " " << kv.first.second << " " << kv.second << "\n";[m
+[32m+[m[32m        out << kv.first.first << " " << g.getSymbolName(kv.first.second) << " " << kv.second << "\n";[m
+     }[m
+     return true;[m
+ }[m
+ [m
+[32m+[m[32m// Carga mapeando el nombre al ID actual de la gramática cargada[m
+ bool LR1Builder::loadTable(const std::string& filename) {[m
+     std::ifstream in(filename);[m
+     if (!in.is_open()) return false;[m
+[36m@@ -567,24 +487,35 @@[m [mbool LR1Builder::loadTable(const std::string& filename) {[m
+     if (!(in >> action_sz)) return false;[m
+ [m
+     for (size_t i = 0; i < action_sz; ++i) {[m
+[31m-        int state, sym_id;[m
+[31m-        std::string act;[m
+[31m-        in >> state >> sym_id >> act;[m
+[31m-        Action[{state, sym_id}] = act;[m
+[32m+[m[32m        int state;[m
+[32m+[m[32m        std::string sym_name, act;[m
+[32m+[m[32m        in >> state >> sym_name >> act;[m
+[32m+[m[41m        [m
+[32m+[m[32m        auto it = g.symbol_to_id.find(sym_name);[m
+[32m+[m[32m        if (it != g.symbol_to_id.end()) {[m
+[32m+[m[32m            Action[{state, it->second}] = act;[m
+[32m+[m[32m        }[m
+     }[m
+ [m
+     if (!(in >> goto_sz)) return false;[m
+ [m
+     for (size_t i = 0; i < goto_sz; ++i) {[m
+[31m-        int state, sym_id, next_state;[m
+[31m-        in >> state >> sym_id >> next_state;[m
+[31m-        Goto[{state, sym_id}] = next_state;[m
+[32m+[m[32m        int state, next_state;[m
+[32m+[m[32m        std::string sym_name;[m
+[32m+[m[32m        in >> state >> sym_name >> next_state;[m
+[32m+[m[41m        [m
+[32m+[m[32m        auto it = g.symbol_to_id.find(sym_name);[m
+[32m+[m[32m        if (it != g.symbol_to_id.end()) {[m
+[32m+[m[32m            Goto[{state, it->second}] = next_state;[m
+[32m+[m[32m        }[m
+     }[m
+     return true;[m
+ }[m
+ [m
+[31m-// Seguimiento paso a paso (Trace) con Modo Pánico[m
+[31m-bool LR1Builder::parseTokensWithTrace(const std::vector<Token>& tokens) const {[m
+[32m+[m[32mbool LR1Builder::parseTokensWithTrace(const std::vector<Token>& tokens){[m
+[32m+[m
+[32m+[m[32m    follow();[m
+[32m+[m
+     struct StackElem {[m
+         int state;[m
+         std::string symbol;[m
+[36m@@ -621,17 +552,24 @@[m [mbool LR1Builder::parseTokensWithTrace(const std::vector<Token>& tokens) const {[m
+ [m
+     bool has_error = false;[m
+ [m
+[31m-    while (true) {[m
+[32m+[m[32m    size_t last_error_cursor = static_cast<size_t>(-1);[m
+[32m+[m[32m    int last_error_state = -1;[m
+ [m
+[32m+[m[32m    while (true) {[m
+         int state = stack.back().state;[m
+         std::string curr_token = (cursor < tokens.size()) ? tokens[cursor].token_name : "EOF";[m
+ [m
+[31m-        // Normalizamos EOF[m
+         if (curr_token == "EOF") {[m
+             curr_token = "eof";[m
+         }[m
+ [m
+[31m-        int sym_id = g.symbol_to_id.count(curr_token) ? g.symbol_to_id.at(curr_token) : -1;[m
+[32m+[m[32m        int sym_id = -1;[m
+[32m+[m[32m        if (g.symbol_to_id.count(curr_token)) {[m
+[32m+[m[32m            sym_id = g.symbol_to_id.at(curr_token);[m
+[32m+[m[32m        } else if (g.symbol_to_id.count("ID")) {[m
+[32m+[m[32m            // Fallback para identificadores genéricos[m
+[32m+[m[32m            sym_id = g.symbol_to_id.at("ID");[m
+[32m+[m[32m        }[m
+ [m
+         auto it = Action.find({state, sym_id});[m
+         std::string act = (it != Action.end()) ? it->second : "";[m
+[36m@@ -643,57 +581,162 @@[m [mbool LR1Builder::parseTokensWithTrace(const std::vector<Token>& tokens) const {[m
+ [m
+         if (act.empty()) {[m
+             has_error = true;[m
+[31m-            std::cout << "\n[ERROR SINTACTICO] En linea " [m
+[31m-                    << tokens[cursor].line << ", columna " << tokens[cursor].col [m
+[31m-                    << ": Token inesperado '" << tokens[cursor].lexeme << "' (" << curr_token << ")\n";[m
+ [m
+[31m-            // --- CAMBIO: INICIO DEL MODO PÁNICO ---[m
+[31m-            // Explicación: En vez de morir aquí, tratamos de recuperarnos.[m
+[32m+[m[32m            if (cursor < tokens.size()) {[m
+[32m+[m[32m                std::cout << "\n[ERROR SINTACTICO] En linea "[m
+[32m+[m[32m                        << tokens[cursor].line << ", columna "[m
+[32m+[m[32m                        << tokens[cursor].col[m
+[32m+[m[32m                        << ": Token inesperado '"[m
+[32m+[m[32m                        << tokens[cursor].lexeme << "' (" << curr_token << ")\n";[m
+[32m+[m[32m            } else {[m
+[32m+[m[32m                std::cout << "\n[ERROR SINTACTICO] Fin inesperado de los tokens.\n";[m
+[32m+[m[32m            }[m
+[32m+[m
+ [m
+[31m-            std::cout << "[MODO PANICO] Limpiando pila y buscando punto de sincronizacion...\n";[m
+[32m+[m[32m            if (cursor == last_error_cursor &&[m
+[32m+[m[32m                state == last_error_state) {[m
+ [m
+[31m-            // 1. Buscamos IDs de No-Terminales que sean seguros para continuar (como una sentencia entera)[m
+[31m-            int nt_stmt = g.symbol_to_id.count("stmt") ? g.symbol_to_id.at("stmt") : -1;[m
+[31m-            int nt_decl_item = g.symbol_to_id.count("decl_item") ? g.symbol_to_id.at("decl_item") : -1;[m
+[31m-            int nt_simple_stmt = g.symbol_to_id.count("simple_stmt") ? g.symbol_to_id.at("simple_stmt") : -1;[m
+[32m+[m[32m                std::cout << "[MODO PANICO] No hubo progreso. "[m
+[32m+[m[32m                        << "Descartando el token actual.\n";[m
+ [m
+[31m-            // 2. Desempilamos la pila (borramos lo que estábamos analizando a medias) hasta llegar a un estado donde podamos aceptar un 'stmt'[m
+[31m-            while (stack.size() > 1) {[m
+[31m-                int st = stack.back().state;[m
+[31m-                [m
+[31m-                // Verificamos si existe transicion Goto para un no-terminal de nivel superior[m
+[31m-                bool can_recover = (nt_stmt != -1 && Goto.find({st, nt_stmt}) != Goto.end()) ||[m
+[31m-                                (nt_decl_item != -1 && Goto.find({st, nt_decl_item}) != Goto.end()) ||[m
+[31m-                                (nt_simple_stmt != -1 && Goto.find({st, nt_simple_stmt}) != Goto.end());[m
+[31m-[m
+[31m-                if (can_recover) {[m
+[31m-                    break; // Encontramos un estado base limpio y seguro[m
+[32m+[m[32m                if (cursor >= tokens.size()) {[m
+[32m+[m[32m                    return false;[m
+                 }[m
+[31m-                stack.pop_back(); // Limpiamos la produccion incompleta[m
+[32m+[m
+[32m+[m[32m                cursor++;[m
+[32m+[m[32m                last_error_cursor = static_cast<size_t>(-1);[m
+[32m+[m[32m                last_error_state = -1;[m
+[32m+[m[32m                continue;[m
+             }[m
+ [m
+[31m-            // 3. Ignoramos los tokens siguientes hasta encontrar un limitador lógico (Ej: salto de línea)[m
+[31m-            std::set<std::string> sync_tokens = {"NEWLINE", "SEMICOLON", "DEDENT", "EOF"};[m
+[32m+[m[32m            last_error_cursor = cursor;[m
+[32m+[m[32m            last_error_state = state;[m
+[32m+[m
+[32m+[m[32m            std::cout << "[MODO PANICO] Buscando token de sincronizacion...\n";[m
+[32m+[m
+[32m+[m[32m            int nt_decl_item = g.symbol_to_id.count("decl_item")[m
+[32m+[m[32m                ? g.symbol_to_id.at("decl_item") : -1;[m
+[32m+[m
+[32m+[m[32m            int nt_stmt = g.symbol_to_id.count("stmt")[m
+[32m+[m[32m                ? g.symbol_to_id.at("stmt") : -1;[m
+[32m+[m
+[32m+[m[32m            int nt_simple_stmt = g.symbol_to_id.count("simple_stmt")[m
+[32m+[m[32m                ? g.symbol_to_id.at("simple_stmt") : -1;[m
+[32m+[m
+[32m+[m[32m            // Construir los tokens de sincronizacion con FOLLOW.[m
+[32m+[m[32m            std::set<std::string> sync_tokens;[m
+[32m+[m
+[32m+[m[32m            auto addFollowTokens = [&](int nt) {[m
+[32m+[m[32m                if (nt == -1) return;[m
+[32m+[m
+[32m+[m[32m                auto it_follow = follow_sets.find(nt);[m
+[32m+[m[32m                if (it_follow == follow_sets.end()) return;[m
+[32m+[m
+[32m+[m[32m                for (int symbol : it_follow->second) {[m
+[32m+[m[32m                    sync_tokens.insert(g.getSymbolName(symbol));[m
+[32m+[m[32m                }[m
+[32m+[m[32m            };[m
+[32m+[m
+[32m+[m[32m            addFollowTokens(nt_decl_item);[m
+[32m+[m[32m            addFollowTokens(nt_stmt);[m
+[32m+[m[32m            addFollowTokens(nt_simple_stmt);[m
+[32m+[m
+[32m+[m[32m            // 1. Descartar tokens hasta encontrar uno de sincronizacion.[m
+[32m+[m[32m            while (cursor < tokens.size()) {[m
+[32m+[m[32m                std::string token_name = tokens[cursor].token_name;[m
+[32m+[m
+[32m+[m[32m                if (token_name == "EOF") {[m
+[32m+[m[32m                    token_name = "eof";[m
+[32m+[m[32m                }[m
+[32m+[m
+[32m+[m[32m                if (sync_tokens.count(token_name)) {[m
+[32m+[m[32m                    break;[m
+[32m+[m[32m                }[m
+[32m+[m
+[32m+[m[32m                std::cout << "  -> Descartando token: "[m
+[32m+[m[32m                        << tokens[cursor].lexeme << "\n";[m
+ [m
+[31m-            while (cursor < tokens.size() && sync_tokens.find(tokens[cursor].token_name) == sync_tokens.end()) {[m
+[31m-                std::cout << "  -> Retrocediendo/Descartando token: " << tokens[cursor].lexeme << "\n";[m
+                 cursor++;[m
+             }[m
+ [m
+[31m-            if (cursor >= tokens.size() || tokens[cursor].token_name == "EOF") {[m
+[31m-                std::cout << "[MODO PANICO] No se pudo recuperar antes de alcanzar el final del archivo.\n";[m
+[32m+[m[32m            if (cursor >= tokens.size()) {[m
+[32m+[m[32m                std::cout << "[MODO PANICO] No se encontro un token de sincronizacion.\n";[m
+                 return false;[m
+             }[m
+ [m
+[31m-           // 4. Retomamos el análisis en la siguiente línea limpia[m
+[31m-            std::cout << "  -> Sincronizado en el token: " << tokens[cursor].token_name << "\n";[m
+[31m-            cursor++; // Consumir NEWLINE / DEDENT[m
+[32m+[m[32m            std::string sync_token = tokens[cursor].token_name;[m
+[32m+[m
+[32m+[m[32m            if (sync_token == "EOF") {[m
+[32m+[m[32m                sync_token = "eof";[m
+[32m+[m[32m            }[m
+[32m+[m
+[32m+[m[32m            std::cout << "  -> Token de sincronizacion encontrado: "[m
+[32m+[m[32m                    << sync_token << "\n";[m
+[32m+[m
+[32m+[m[32m            // 2. Desapilar hasta encontrar un estado que pueda[m
+[32m+[m[32m            //    procesar el token de sincronizacion mediante ACTION.[m
+[32m+[m
+[32m+[m[32m            bool recovered = false;[m
+[32m+[m
+[32m+[m[32m            int sync_sym_id = -1;[m
+[32m+[m[32m            auto sync_it = g.symbol_to_id.find(sync_token);[m
+[32m+[m
+[32m+[m[32m            if (sync_it != g.symbol_to_id.end()) {[m
+[32m+[m[32m                sync_sym_id = sync_it->second;[m
+[32m+[m[32m            }[m
+[32m+[m
+[32m+[m[32m            while (sync_sym_id != -1 && !stack.empty()) {[m
+[32m+[m[32m                int st = stack.back().state;[m
+[32m+[m
+[32m+[m[32m                // El estado puede procesar el token actual.[m
+[32m+[m[32m                if (Action.find({st, sync_sym_id}) != Action.end()) {[m
+[32m+[m[32m                    recovered = true;[m
+[32m+[m[32m                    break;[m
+[32m+[m[32m                }[m
+[32m+[m
+[32m+[m[32m                // No eliminar el estado inicial.[m
+[32m+[m[32m                if (stack.size() == 1) {[m
+[32m+[m[32m                    break;[m
+[32m+[m[32m                }[m
+[32m+[m
+[32m+[m[32m                stack.pop_back();[m
+[32m+[m[32m            }[m
+[32m+[m
+[32m+[m[32m            if (!recovered) {[m
+[32m+[m[32m                std::cout << "[MODO PANICO] No se encontro un estado "[m
+[32m+[m[32m                        << "que pueda procesar el token de sincronizacion.\n";[m
+[32m+[m
+[32m+[m[32m                // Descartar el token para intentar continuar.[m
+[32m+[m[32m                if (cursor < tokens.size()) {[m
+[32m+[m[32m                    cursor++;[m
+[32m+[m[32m                    last_error_cursor = static_cast<size_t>(-1);[m
+[32m+[m[32m                    last_error_state = -1;[m
+[32m+[m[32m                    continue;[m
+[32m+[m[32m                }[m
+[32m+[m
+[32m+[m[32m                return false;[m
+[32m+[m[32m            }[m
+[32m+[m
+[32m+[m[32m            // No insertar no terminales artificiales en la pila.[m
+[32m+[m[32m            // Tampoco consumir el token de sincronizacion.[m
+[32m+[m[32m            std::cout << "  -> Estado recuperado: "[m
+[32m+[m[32m                    << stack.back().state << "\n";[m
+[32m+[m
+[32m+[m[32m            std::cout << "  -> Se conserva el token actual: "[m
+[32m+[m[32m                    << sync_token << "\n";[m
+[32m+[m
+             continue;[m
+         }[m
+ [m
+         if (act == "acc") {[m
+             std::cout << "+------+---------------------------------+----------------------+----------+\n";[m
+[31m-            std::cout << "\n>> Entrada ACEPTADA por el parser.\n";[m
+[32m+[m
+[32m+[m[32m            if (has_error) {[m
+[32m+[m[32m                std::cout << "\n>> Analisis finalizado con errores sintacticos.\n";[m
+[32m+[m[32m            } else {[m
+[32m+[m[32m                std::cout << "\n>> Entrada aceptada sin errores.\n";[m
+[32m+[m[32m            }[m
+[32m+[m
+             return !has_error;[m
+         }[m
+ [m
+[36m@@ -716,7 +759,6 @@[m [mbool LR1Builder::parseTokensWithTrace(const std::vector<Token>& tokens) const {[m
+             auto git = Goto.find({top_state, lhs_id});[m
+             if (git != Goto.end()) {[m
+                 int goto_state = git->second;[m
+[31m-[m
+                 stack.push_back({goto_state, lhs_name});[m
+             } else {[m
+                 std::cerr << "[ERROR CRÍTICO] Estado Goto no encontrado.\n";[m
+[1mdiff --git a/parser.hpp b/parser.hpp[m
+[1mindex 1a4ddeb..609356f 100644[m
+[1m--- a/parser.hpp[m
+[1m+++ b/parser.hpp[m
+[36m@@ -8,10 +8,6 @@[m
+ #include <deque>[m
+ #include <iostream>[m
+ [m
+[31m-// --- CAMBIO: Estructura Token ---[m
+[31m-// Explicación: Antes pasábamos simples strings. Ahora guardamos el nombre, lexema, línea y columna [m
+[31m-// para poder decirle al usuario exactamente dónde se equivocó.[m
+[31m-[m
+ struct Token {[m
+     std::string token_name;[m
+     std::string lexeme;[m
+[36m@@ -80,6 +76,7 @@[m [mclass LR1Builder {[m
+ public:[m
+     Grammar g;[m
+     std::map<int, std::set<int>> first_sets;[m
+[32m+[m[32m    std::map<int, std::set<int>> follow_sets;[m
+ [m
+     std::vector<std::set<Item>> CC;[m
+     std::map<int, std::set<Item>> cc_kernels;[m
+[36m@@ -93,6 +90,7 @@[m [mpublic:[m
+     LR1Builder(const Grammar& grammar);[m
+ [m
+     void first();[m
+[32m+[m[32m    void follow();[m
+     std::set<int> firstCadena(const std::vector<int>& beta) const;[m
+     std::set<Item> closure(const std::set<Item>& s);[m
+     std::set<Item> gotoState(const std::set<Item>& s, int x);[m
+[36m@@ -103,13 +101,11 @@[m [mpublic:[m
+     void printClosureTable() const;[m
+     void printLRTable() const;[m
+ [m
+[31m-    // --- CAMBIO: Nuevas funciones declaradas ---[m
+[31m-    // Métodos para guardar/cargar la tabla LR(1) en un archivo binario/texto[m
+[32m+[m[32m    // Métodos actualizados para guardar/cargar la tabla usando nombres de símbolos[m
+     bool saveTable(const std::string& filename) const;[m
+     bool loadTable(const std::string& filename);[m
+ [m
+[31m-    // Método para parsear tokens con tabla de seguimiento y modo pánico[m
+[31m-    bool parseTokensWithTrace(const std::vector<Token>& tokens) const;[m
+[32m+[m[32m    bool parseTokensWithTrace(const std::vector<Token>& tokens);[m
+ };[m
+ [m
+ #endif[m
+\ No newline at end of file[m
+[1mdiff --git a/scanner.cpp b/scanner.cpp[m
+[1mindex 226296f..bb625b1 100644[m
+[1m--- a/scanner.cpp[m
+[1m+++ b/scanner.cpp[m
+[36m@@ -4,10 +4,6 @@[m
+ #include <unordered_map>[m
+ #include <cctype>[m
+ [m
+[31m-// --- CAMBIO: Mapeo exacto de palabras clave ---[m
+[31m-// Explicación: Se ajustaron los nombres en el mapa para que coincidan EXACTO [m
+[31m-// con lo que escribimos en "Chocopy_Gramatica.txt". [m
+[31m-// Ejemplo: "int" ahora es "IDSTRING" y "False" es "False" (no "FALSE").[m
+ static const std::unordered_map<std::string, std::string> keywords = {[m
+     {"False", "False"},       {"None", "None"},         {"True", "True"},[m
+     {"and", "and"},           {"as", "as"},             {"assert", "assert"},[m
+[36m@@ -73,13 +69,7 @@[m [mvoid Scanner::report_error(const std::string& message, int line, int col) {[m
+     error_count++;[m
+ }[m
+ [m
+[31m-// --- CAMBIO: process_indentation ---[m
+[31m-[m
+ void Scanner::process_indentation(std::vector<Token>& tokens) {[m
+[31m-[m
+[31m-    // Explicación: Python y Chocopy no usan llaves { }, usan sangrías (espacios).[m
+[31m-    // Aquí contamos los espacios a la izquierda de la línea.[m
+[31m-[m
+     while (index_pos < sizee && at_line_start) {[m
+         int space_count = 0;[m
+         int temp_index = index_pos;[m
+[36m@@ -109,13 +99,16 @@[m [mvoid Scanner::process_indentation(std::vector<Token>& tokens) {[m
+         at_line_start = false;[m
+ [m
+         int current_indent = indent_stack.back();[m
+[31m-        // Si hay MÁS espacios que la línea anterior, entramos a un nuevo bloque -> Token INDENT[m
+[32m+[m
+         if (space_count > current_indent) {[m
+             indent_stack.push_back(space_count);[m
+             tokens.push_back(Token("INDENT", "INDENT", line_global, col_global));[m
+         } [m
+[31m-        // Si hay MENOS espacios, salimos de uno o varios bloques -> Tokens DEDENT[m
+         else if (space_count < current_indent) {[m
+[32m+[m[32m            if (!tokens.empty() && tokens.back().token_name != "NEWLINE") {[m
+[32m+[m[32m                tokens.push_back(Token("NEWLINE", "\\n", line_global, col_global));[m
+[32m+[m[32m            }[m
+[32m+[m
+             while (!indent_stack.empty() && indent_stack.back() > space_count) {[m
+                 indent_stack.pop_back();[m
+                 tokens.push_back(Token("DEDENT", "DEDENT", line_global, col_global));[m
+[36m@@ -124,10 +117,6 @@[m [mvoid Scanner::process_indentation(std::vector<Token>& tokens) {[m
+     }[m
+ }[m
+ [m
+[31m-// --- CAMBIO: Símbolos exactos ---[m
+[31m-    // Explicación: En lugar de retornar Token("PLUS", "+"), ahora retornamos Token("+", "+").[m
+[31m-    // La gramática literal en txt pide los símbolos tal cual.[m
+[31m-[m
+ void Scanner::scan_next_tokens(std::vector<Token>& tokens) {[m
+     if (at_line_start) {[m
+         process_indentation(tokens);[m
+[36m@@ -188,7 +177,6 @@[m [mvoid Scanner::scan_next_tokens(std::vector<Token>& tokens) {[m
+         while (index_pos < sizee && isdigit(peek_actual_char())) {[m
+             word += get_char();[m
+         }[m
+[31m-        // Debe ser INTEGER como indica la gramatica de literal[m
+         tokens.push_back(Token("INTEGER", word, start_line, start_col));[m
+         return;[m
+     }[m
+[36m@@ -296,10 +284,6 @@[m [mstd::vector<Token> Scanner::scan() {[m
+         scan_next_tokens(tokens);[m
+     }[m
+ [m
+[31m-// --- CAMBIO: Limpieza al final del archivo (EOF) ---[m
+[31m-    // Explicación: Si el archivo termina y aún hay bloques indentados abiertos,[m
+[31m-    // debemos mandar los DEDENT faltantes y un NEWLINE para que el parser no tire erro[m
+[31m-[m
+     if (!tokens.empty() && tokens.back().token_name == "EOF") {[m
+         Token eof_tok = tokens.back();[m
+         tokens.pop_back();[m
+[1mdiff --git a/tabla_chocopy.dat b/tabla_chocopy.dat[m
+[1mdeleted file mode 100644[m
+[1mindex 93a173b..0000000[m
+[1m--- a/tabla_chocopy.dat[m
+[1m+++ /dev/null[m
+[36m@@ -1,11234 +0,0 @@[m
+[31m-9048[m
+[31m-0 1 r4[m
+[31m-0 46 r4[m
+[31m-0 47 r4[m
+[31m-0 48 r4[m
+[31m-0 54 r4[m
+[31m-0 55 r4[m
+[31m-0 58 r4[m
+[31m-0 59 r4[m
+[31m-0 64 r4[m
+[31m-0 65 r4[m
+[31m-0 66 r4[m
+[31m-0 70 r4[m
+[31m-0 71 r4[m
+[31m-0 72 r4[m
+[31m-0 73 r4[m
+[31m-0 74 r4[m
+[31m-0 75 r4[m
+[31m-0 78 r4[m
+[31m-0 87 r4[m
+[31m-1 1 acc[m
+[31m-2 1 r2[m
+[31m-2 46 s25[m
+[31m-2 47 s26[m
+[31m-2 48 s27[m
+[31m-2 54 s28[m
+[31m-2 55 s29[m
+[31m-2 58 s30[m
+[31m-2 59 s31[m
+[31m-2 64 s32[m
+[31m-2 65 s33[m
+[31m-2 66 s34[m
+[31m-2 70 s35[m
+[31m-2 71 s36[m
+[31m-2 72 s37[m
+[31m-2 73 s38[m
+[31m-2 74 s39[m
+[31m-2 75 s40[m
+[31m-2 78 s41[m
+[31m-2 87 s42[m
+[31m-3 1 r1[m
+[31m-3 47 s44[m
+[31m-3 48 s27[m
+[31m-3 54 s28[m
+[31m-3 58 s30[m
+[31m-3 59 s31[m
+[31m-3 64 s32[m
+[31m-3 65 s33[m
+[31m-3 66 s34[m
+[31m-3 70 s35[m
+[31m-3 71 s36[m
+[31m-3 72 s37[m
+[31m-3 73 s38[m
+[31m-3 74 s39[m
+[31m-3 75 s40[m
+[31m-3 78 s41[m
+[31m-3 87 s42[m
+[31m-4 1 r3[m
+[31m-4 46 r3[m
+[31m-4 47 r3[m
+[31m-4 48 r3[m
+[31m-4 54 r3[m
+[31m-4 55 r3[m
+[31m-4 58 r3[m
+[31m-4 59 r3[m
+[31m-4 64 r3[m
+[31m-4 65 r3[m
+[31m-4 66 r3[m
+[31m-4 70 r3[m
+[31m-4 71 r3[m
+[31m-4 72 r3[m
+[31m-4 73 r3[m
+[31m-4 74 r3[m
+[31m-4 75 r3[m
+[31m-4 78 r3[m
+[31m-4 87 r3[m
+[31m-5 1 r5[m
+[31m-5 46 r5[m
+[31m-5 47 r5[m
+[31m-5 48 r5[m
+[31m-5 54 r5[m
+[31m-5 55 r5[m
+[31m-5 58 r5[m
+[31m-5 59 r5[m
+[31m-5 64 r5[m
+[31m-5 65 r5[m
+[31m-5 66 r5[m
+[31m-5 70 r5[m
+[31m-5 71 r5[m
+[31m-5 72 r5[m
+[31m-5 73 r5[m
+[31m-5 74 r5[m
+[31m-5 75 r5[m
+[31m-5 78 r5[m
+[31m-5 87 r5[m
+[31m-6 1 r6[m
+[31m-6 46 r6[m
+[31m-6 47 r6[m
+[31m-6 48 r6[m
+[31m-6 54 r6[m
+[31m-6 55 r6[m
+[31m-6 58 r6[m
+[31m-6 59 r6[m
+[31m-6 64 r6[m
+[31m-6 65 r6[m
+[31m-6 66 r6[m
+[31m-6 70 r6[m
+[31m-6 71 r6[m
+[31m-6 72 r6[m
+[31m-6 73 r6[m
+[31m-6 74 r6[m
+[31m-6 75 r6[m
+[31m-6 78 r6[m
+[31m-6 87 r6[m
+[31m-7 1 r7[m
+[31m-7 46 r7[m
+[31m-7 47 r7[m
+[31m-7 48 r7[m
+[31m-7 54 r7[m
+[31m-7 55 r7[m
+[31m-7 58 r7[m
+[31m-7 59 r7[m
+[31m-7 64 r7[m
+[31m-7 65 r7[m
+[31m-7 66 r7[m
+[31m-7 70 r7[m
+[31m-7 71 r7[m
+[31m-7 72 r7[m
+[31m-7 73 r7[m
+[31m-7 74 r7[m
+[31m-7 75 r7[m
+[31m-7 78 r7[m
+[31m-7 87 r7[m
+[31m-8 63 s45[m
+[31m-9 51 r88[m
+[31m-9 59 r88[m
+[31m-9 64 r88[m
+[31m-9 76 r88[m
+[31m-9 77 r88[m
+[31m-9 79 r88[m
+[31m-9 80 r88[m
+[31m-9 81 r88[m
+[31m-9 82 r88[m
+[31m-9 83 r88[m
+[31m-9 84 r88[m
+[31m-9 85 r88[m
+[31m-9 86 r88[m
+[31m-9 87 r88[m
+[31m-9 88 r88[m
+[31m-9 89 r88[m
+[31m-9 90 r88[m
+[31m-9 91 r88[m
+[31m-10 1 r37[m
+[31m-10 47 r37[m
+[31m-10 48 r37[m
+[31m-10 54 r37[m
+[31m-10 58 r37[m
+[31m-10 59 r37[m
+[31m-10 64 r37[m
+[31m-10 65 r37[m
+[31m-10 66 r37[m
+[31m-10 70 r37[m
+[31m-10 71 r37[m
+[31m-10 72 r37[m
+[31m-10 73 r37[m
+[31m-10 74 r37[m
+[31m-10 75 r37[m
+[31m-10 78 r37[m
+[31m-10 87 r37[m
+[31m-11 51 s46[m
+[31m-12 51 r48[m
+[31m-13 47 s44[m
+[31m-13 48 s27[m
+[31m-13 58 s30[m
+[31m-13 59 s31[m
+[31m-13 71 s36[m
+[31m-13 72 s37[m
+[31m-13 73 s38[m
+[31m-13 74 s39[m
+[31m-13 75 s40[m
+[31m-13 78 s41[m
+[31m-13 87 s42[m
+[31m-14 63 s49[m
+[31m-15 51 r61[m
+[31m-15 64 s50[m
+[31m-15 76 s51[m
+[31m-16 51 r64[m
+[31m-16 64 r64[m
+[31m-16 76 r64[m
+[31m-16 77 s52[m
+[31m-17 51 r66[m
+[31m-17 64 r66[m
+[31m-17 76 r66[m
+[31m-17 77 r66[m
+[31m-18 51 r68[m
+[31m-18 64 r68[m
+[31m-18 76 r68[m
+[31m-18 77 r68[m
+[31m-19 51 r70[m
+[31m-19 64 r70[m
+[31m-19 76 r70[m
+[31m-19 77 r70[m
+[31m-19 79 s54[m
+[31m-19 80 s55[m
+[31m-19 81 s56[m
+[31m-19 82 s57[m
+[31m-19 83 s58[m
+[31m-19 84 s59[m
+[31m-19 85 s60[m
+[31m-19 86 s61[m
+[31m-19 87 s62[m
+[31m-20 51 r80[m
+[31m-20 64 r80[m
+[31m-20 76 r80[m
+[31m-20 77 r80[m
+[31m-20 79 r80[m
+[31m-20 80 r80[m
+[31m-20 81 r80[m
+[31m-20 82 r80[m
+[31m-20 83 r80[m
+[31m-20 84 r80[m
+[31m-20 85 r80[m
+[31m-20 86 r80[m
+[31m-20 87 r80[m
+[31m-20 88 s63[m
+[31m-20 89 s64[m
+[31m-20 90 s65[m
+[31m-21 51 r84[m
+[31m-21 64 r84[m
+[31m-21 76 r84[m
+[31m-21 77 r84[m
+[31m-21 79 r84[m
+[31m-21 80 r84[m
+[31m-21 81 r84[m
+[31m-21 82 r84[m
+[31m-21 83 r84[m
+[31m-21 84 r84[m
+[31m-21 85 r84[m
+[31m-21 86 r84[m
+[31m-21 87 r84[m
+[31m-21 88 r84[m
+[31m-21 89 r84[m
+[31m-21 90 r84[m
+[31m-22 51 r86[m
+[31m-22 59 s66[m
+[31m-22 64 r86[m
+[31m-22 76 r86[m
+[31m-22 77 r86[m
+[31m-22 79 r86[m
+[31m-22 80 r86[m
+[31m-22 81 r86[m
+[31m-22 82 r86[m
+[31m-22 83 r86[m
+[31m-22 84 r86[m
+[31m-22 85 r86[m
+[31m-22 86 r86[m
+[31m-22 87 r86[m
+[31m-22 88 r86[m
+[31m-22 89 r86[m
+[31m-22 90 r86[m
+[31m-22 91 s67[m
+[31m-23 48 s68[m
+[31m-23 51 r91[m
+[31m-23 59 r91[m
+[31m-23 63 r102[m
+[31m-23 64 r91[m
+[31m-23 76 r91[m
+[31m-23 77 r91[m
+[31m-23 79 r91[m
+[31m-23 80 r91[m
+[31m-23 81 r91[m
+[31m-23 82 r91[m
+[31m-23 83 r91[m
+[31m-23 84 r91[m
+[31m-23 85 r91[m
+[31m-23 86 r91[m
+[31m-23 87 r91[m
+[31m-23 88 r91[m
+[31m-23 89 r91[m
+[31m-23 90 r91[m
+[31m-23 91 r91[m
+[31m-24 51 r92[m
+[31m-24 59 r92[m
+[31m-24 63 r103[m
+[31m-24 64 r92[m
+[31m-24 76 r92[m
+[31m-24 77 r92[m
+[31m-24 79 r92[m
+[31m-24 80 r92[m
+[31m-24 81 r92[m
+[31m-24 82 r92[m
+[31m-24 83 r92[m
+[31m-24 84 r92[m
+[31m-24 85 r92[m
+[31m-24 86 r92[m
+[31m-24 87 r92[m
+[31m-24 88 r92[m
+[31m-24 89 r92[m
+[31m-24 90 r92[m
+[31m-24 91 r92[m
+[31m-25 47 s69[m
+[31m-26 48 s70[m
+[31m-26 50 s71[m
+[31m-26 51 r87[m
+[31m-26 59 r87[m
+[31m-26 63 r101[m
+[31m-26 64 r87[m
+[31m-26 76 r87[m
+[31m-26 77 r87[m
+[31m-26 79 r87[m
+[31m-26 80 r87[m
+[31m-26 81 r87[m
+[31m-26 82 r87[m
+[31m-26 83 r87[m
+[31m-26 84 r87[m
+[31m-26 85 r87[m
+[31m-26 86 r87[m
+[31m-26 87 r87[m
+[31m-26 88 r87[m
+[31m-26 89 r87[m
+[31m-26 90 r87[m
+[31m-26 91 r87[m
+[31m-27 47 s84[m
+[31m-27 48 s85[m
+[31m-27 58 s86[m
+[31m-27 59 s87[m
+[31m-27 71 s88[m
+[31m-27 72 s89[m
+[31m-27 73 s90[m
+[31m-27 74 s91[m
+[31m-27 75 s92[m
+[31m-27 78 s93[m
+[31m-27 87 s94[m
+[31m-28 51 r47[m
+[31m-29 47 s95[m
+[31m-30 51 r59[m
+[31m-30 59 r59[m
+[31m-30 64 r59[m
+[31m-30 76 r59[m
+[31m-30 77 r59[m
+[31m-30 79 r59[m
+[31m-30 80 r59[m
+[31m-30 81 r59[m
+[31m-30 82 r59[m
+[31m-30 83 r59[m
+[31m-30 84 r59[m
+[31m-30 85 r59[m
+[31m-30 86 r59[m
+[31m-30 87 r59[m
+[31m-30 88 r59[m
+[31m-30 89 r59[m
+[31m-30 90 r59[m
+[31m-30 91 r59[m
+[31m-31 47 s110[m
+[31m-31 48 s111[m
+[31m-31 58 s112[m
+[31m-31 59 s113[m
+[31m-31 60 r98[m
+[31m-31 71 s114[m
+[31m-31 72 s115[m
+[31m-31 73 s116[m
+[31m-31 74 s117[m
+[31m-31 75 s118[m
+[31m-31 78 s119[m
+[31m-31 87 s120[m
+[31m-32 47 s133[m
+[31m-32 48 s134[m
+[31m-32 58 s135[m
+[31m-32 59 s136[m
+[31m-32 71 s137[m
+[31m-32 72 s138[m
+[31m-32 73 s139[m
+[31m-32 74 s140[m
+[31m-32 75 s141[m
+[31m-32 78 s142[m
+[31m-32 87 s143[m
+[31m-33 47 s133[m
+[31m-33 48 s134[m
+[31m-33 58 s135[m
+[31m-33 59 s136[m
+[31m-33 71 s137[m
+[31m-33 72 s138[m
+[31m-33 73 s139[m
+[31m-33 74 s140[m
+[31m-33 75 s141[m
+[31m-33 78 s142[m
+[31m-33 87 s143[m
+[31m-34 47 s145[m
+[31m-35 47 s151[m
+[31m-35 48 s27[m
+[31m-35 51 r54[m
+[31m-35 58 s30[m
+[31m-35 59 s31[m
+[31m-35 71 s36[m
+[31m-35 72 s37[m
+[31m-35 73 s38[m
+[31m-35 74 s39[m
+[31m-35 75 s40[m
+[31m-35 78 s41[m
+[31m-35 87 s42[m
+[31m-36 51 r55[m
+[31m-36 59 r55[m
+[31m-36 64 r55[m
+[31m-36 76 r55[m
+[31m-36 77 r55[m
+[31m-36 79 r55[m
+[31m-36 80 r55[m
+[31m-36 81 r55[m
+[31m-36 82 r55[m
+[31m-36 83 r55[m
+[31m-36 84 r55[m
+[31m-36 85 r55[m
+[31m-36 86 r55[m
+[31m-36 87 r55[m
+[31m-36 88 r55[m
+[31m-36 89 r55[m
+[31m-36 90 r55[m
+[31m-36 91 r55[m
+[31m-37 51 r56[m
+[31m-37 59 r56[m
+[31m-37 64 r56[m
+[31m-37 76 r56[m
+[31m-37 77 r56[m
+[31m-37 79 r56[m
+[31m-37 80 r56[m
+[31m-37 81 r56[m
+[31m-37 82 r56[m
+[31m-37 83 r56[m
+[31m-37 84 r56[m
+[31m-37 85 r56[m
+[31m-37 86 r56[m
+[31m-37 87 r56[m
+[31m-37 88 r56[m
+[31m-37 89 r56[m
+[31m-37 90 r56[m
+[31m-37 91 r56[m
+[31m-38 51 r57[m
+[31m-38 59 r57[m
+[31m-38 64 r57[m
+[31m-38 76 r57[m
+[31m-38 77 r57[m
+[31m-38 79 r57[m
+[31m-38 80 r57[m
+[31m-38 81 r57[m
+[31m-38 82 r57[m
+[31m-38 83 r57[m
+[31m-38 84 r57[m
+[31m-38 85 r57[m
+[31m-38 86 r57[m
+[31m-38 87 r57[m
+[31m-38 88 r57[m
+[31m-38 89 r57[m
+[31m-38 90 r57[m
+[31m-38 91 r57[m
+[31m-39 51 r58[m
+[31m-39 59 r58[m
+[31m-39 64 r58[m
+[31m-39 76 r58[m
+[31m-39 77 r58[m
+[31m-39 79 r58[m
+[31m-39 80 r58[m
+[31m-39 81 r58[m
+[31m-39 82 r58[m
+[31m-39 83 r58[m
+[31m-39 84 r58[m
+[31m-39 85 r58[m
+[31m-39 86 r58[m
+[31m-39 87 r58[m
+[31m-39 88 r58[m
+[31m-39 89 r58[m
+[31m-39 90 r58[m
+[31m-39 91 r58[m
+[31m-40 51 r60[m
+[31m-40 59 r60[m
+[31m-40 64 r60[m
+[31m-40 76 r60[m
+[31m-40 77 r60[m
+[31m-40 79 r60[m
+[31m-40 80 r60[m
+[31m-40 81 r60[m
+[31m-40 82 r60[m
+[31m-40 83 r60[m
+[31m-40 84 r60[m
+[31m-40 85 r60[m
+[31m-40 86 r60[m
+[31m-40 87 r60[m
+[31m-40 88 r60[m
+[31m-40 89 r60[m
+[31m-40 90 r60[m
+[31m-40 91 r60[m
+[31m-41 47 s151[m
+[31m-41 48 s27[m
+[31m-41 58 s30[m
+[31m-41 59 s31[m
+[31m-41 71 s36[m
+[31m-41 72 s37[m
+[31m-41 73 s38[m
+[31m-41 74 s39[m
+[31m-41 75 s40[m
+[31m-41 78 s41[m
+[31m-41 87 s42[m
+[31m-42 47 s151[m
+[31m-42 48 s27[m
+[31m-42 58 s30[m
+[31m-42 59 s31[m
+[31m-42 71 s36[m
+[31m-42 72 s37[m
+[31m-42 73 s38[m
+[31m-42 74 s39[m
+[31m-42 75 s40[m
+[31m-42 87 s42[m
+[31m-43 1 r36[m
+[31m-43 47 r36[m
+[31m-43 48 r36[m
+[31m-43 54 r36[m
+[31m-43 58 r36[m
+[31m-43 59 r36[m
+[31m-43 64 r36[m
+[31m-43 65 r36[m
+[31m-43 66 r36[m
+[31m-43 70 r36[m
+[31m-43 71 r36[m
+[31m-43 72 r36[m
+[31m-43 73 r36[m
+[31m-43 74 r36[m
+[31m-43 75 r36[m
+[31m-43 78 r36[m
+[31m-43 87 r36[m
+[31m-44 48 s70[m
+[31m-44 51 r87[m
+[31m-44 59 r87[m
+[31m-44 63 r101[m
+[31m-44 64 r87[m
+[31m-44 76 r87[m
+[31m-44 77 r87[m
+[31m-44 79 r87[m
+[31m-44 80 r87[m
+[31m-44 81 r87[m
+[31m-44 82 r87[m
+[31m-44 83 r87[m
+[31m-44 84 r87[m
+[31m-44 85 r87[m
+[31m-44 86 r87[m
+[31m-44 87 r87[m
+[31m-44 88 r87[m
+[31m-44 89 r87[m
+[31m-44 90 r87[m
+[31m-44 91 r87[m
+[31m-45 58 s155[m
+[31m-45 71 s156[m
+[31m-45 72 s157[m
+[31m-45 73 s158[m
+[31m-45 74 s159[m
+[31m-45 75 s160[m
+[31m-46 1 r38[m
+[31m-46 47 r38[m
+[31m-46 48 r38[m
+[31m-46 54 r38[m
+[31m-46 58 r38[m
+[31m-46 59 r38[m
+[31m-46 64 r38[m
+[31m-46 65 r38[m
+[31m-46 66 r38[m
+[31m-46 70 r38[m
+[31m-46 71 r38[m
+[31m-46 72 r38[m
+[31m-46 73 r38[m
+[31m-46 74 r38[m
+[31m-46 75 r38[m
+[31m-46 78 r38[m
+[31m-46 87 r38[m
+[31m-47 51 r50[m
+[31m-48 63 s161[m
+[31m-49 47 r52[m
+[31m-49 48 r52[m
+[31m-49 58 r52[m
+[31m-49 59 r52[m
+[31m-49 71 r52[m
+[31m-49 72 r52[m
+[31m-49 73 r52[m
+[31m-49 74 r52[m
+[31m-49 75 r52[m
+[31m-49 78 r52[m
+[31m-49 87 r52[m
+[31m-50 47 s173[m
+[31m-50 48 s174[m
+[31m-50 58 s175[m
+[31m-50 59 s176[m
+[31m-50 71 s177[m
+[31m-50 72 s178[m
+[31m-50 73 s179[m
+[31m-50 74 s180[m
+[31m-50 75 s181[m
+[31m-50 78 s182[m
+[31m-50 87 s183[m
+[31m-51 47 s151[m
+[31m-51 48 s27[m
+[31m-51 58 s30[m
+[31m-51 59 s31[m
+[31m-51 71 s36[m
+[31m-51 72 s37[m
+[31m-51 73 s38[m
+[31m-51 74 s39[m
+[31m-51 75 s40[m
+[31m-51 78 s41[m
+[31m-51 87 s42[m
+[31m-52 47 s151[m
+[31m-52 48 s27[m
+[31m-52 58 s30[m
+[31m-52 59 s31[m
+[31m-52 71 s36[m
+[31m-52 72 s37[m
+[31m-52 73 s38[m
+[31m-52 74 s39[m
+[31m-52 75 s40[m
+[31m-52 78 s41[m
+[31m-52 87 s42[m
+[31m-53 47 s193[m
+[31m-53 48 s194[m
+[31m-53 58 s195[m
+[31m-53 59 s196[m
+[31m-53 71 s197[m
+[31m-53 72 s198[m
+[31m-53 73 s199[m
+[31m-53 74 s200[m
+[31m-53 75 s201[m
+[31m-53 87 s202[m
+[31m-54 47 r71[m
+[31m-54 48 r71[m
+[31m-54 58 r71[m
+[31m-54 59 r71[m
+[31m-54 71 r71[m
+[31m-54 72 r71[m
+[31m-54 73 r71[m
+[31m-54 74 r71[m
+[31m-54 75 r71[m
+[31m-54 87 r71[m
+[31m-55 47 r72[m
+[31m-55 48 r72[m
+[31m-55 58 r72[m
+[31m-55 59 r72[m
+[31m-55 71 r72[m
+[31m-55 72 r72[m
+[31m-55 73 r72[m
+[31m-55 74 r72[m
+[31m-55 75 r72[m
+[31m-55 87 r72[m
+[31m-56 47 r73[m
+[31m-56 48 r73[m
+[31m-56 58 r73[m
+[31m-56 59 r73[m
+[31m-56 71 r73[m
+[31m-56 72 r73[m
+[31m-56 73 r73[m
+[31m-56 74 r73[m
+[31m-56 75 r73[m
+[31m-56 87 r73[m
+[31m-57 47 r74[m
+[31m-57 48 r74[m
+[31m-57 58 r74[m
+[31m-57 59 r74[m
+[31m-57 71 r74[m
+[31m-57 72 r74[m
+[31m-57 73 r74[m
+[31m-57 74 r74[m
+[31m-57 75 r74[m
+[31m-57 87 r74[m
+[31m-58 47 r75[m
+[31m-58 48 r75[m
+[31m-58 58 r75[m
+[31m-58 59 r75[m
+[31m-58 71 r75[m
+[31m-58 72 r75[m
+[31m-58 73 r75[m
+[31m-58 74 r75[m
+[31m-58 75 r75[m
+[31m-58 87 r75[m
+[31m-59 47 r76[m
+[31m-59 48 r76[m
+[31m-59 58 r76[m
+[31m-59 59 r76[m
+[31m-59 71 r76[m
+[31m-59 72 r76[m
+[31m-59 73 r76[m
+[31m-59 74 r76[m
+[31m-59 75 r76[m
+[31m-59 87 r76[m
+[31m-60 47 r77[m
+[31m-60 48 r77[m
+[31m-60 58 r77[m
+[31m-60 59 r77[m
+[31m-60 71 r77[m
+[31m-60 72 r77[m
+[31m-60 73 r77[m
+[31m-60 74 r77[m
+[31m-60 75 r77[m
+[31m-60 87 r77[m
+[31m-61 47 s151[m
+[31m-61 48 s27[m
+[31m-61 58 s30[m
+[31m-61 59 s31[m
+[31m-61 71 s36[m
+[31m-61 72 s37[m
+[31m-61 73 s38[m
+[31m-61 74 s39[m
+[31m-61 75 s40[m
+[31m-61 87 s42[m
+[31m-62 47 s151[m
+[31m-62 48 s27[m
+[31m-62 58 s30[m
+[31m-62 59 s31[m
+[31m-62 71 s36[m
+[31m-62 72 s37[m
+[31m-62 73 s38[m
+[31m-62 74 s39[m
+[31m-62 75 s40[m
+[31m-62 87 s42[m
+[31m-63 47 s151[m
+[31m-63 48 s27[m
+[31m-63 58 s30[m
+[31m-63 59 s31[m
+[31m-63 71 s36[m
+[31m-63 72 s37[m
+[31m-63 73 s38[m
+[31m-63 74 s39[m
+[31m-63 75 s40[m
+[31m-63 87 s42[m
+[31m-64 47 s151[m
+[31m-64 48 s27[m
+[31m-64 58 s30[m
+[31m-64 59 s31[m
+[31m-64 71 s36[m
+[31m-64 72 s37[m
+[31m-64 73 s38[m
+[31m-64 74 s39[m
+[31m-64 75 s40[m
+[31m-64 87 s42[m
+[31m-65 47 s151[m
+[31m-65 48 s27[m
+[31m-65 58 s30[m
+[31m-65 59 s31[m
+[31m-65 71 s36[m
+[31m-65 72 s37[m
+[31m-65 73 s38[m
+[31m-65 74 s39[m
+[31m-65 75 s40[m
+[31m-65 87 s42[m
+[31m-66 47 s220[m
+[31m-66 48 s221[m
+[31m-66 58 s222[m
+[31m-66 59 s223[m
+[31m-66 71 s224[m
+[31m-66 72 s225[m
+[31m-66 73 s226[m
+[31m-66 74 s227[m
+[31m-66 75 s228[m
+[31m-66 78 s229[m
+[31m-66 87 s230[m
+[31m-67 47 s231[m
+[31m-68 47 s246[m
+[31m-68 48 s247[m
+[31m-68 49 r98[m
+[31m-68 58 s248[m
+[31m-68 59 s249[m
+[31m-68 71 s250[m
+[31m-68 72 s251[m
+[31m-68 73 s252[m
+[31m-68 74 s253[m
+[31m-68 75 s254[m
+[31m-68 78 s255[m
+[31m-68 87 s256[m
+[31m-69 48 s257[m
+[31m-70 47 s246[m
+[31m-70 48 s247[m
+[31m-70 49 r98[m
+[31m-70 58 s248[m
+[31m-70 59 s249[m
+[31m-70 71 s250[m
+[31m-70 72 s251[m
+[31m-70 73 s252[m
+[31m-70 74 s253[m
+[31m-70 75 s254[m
+[31m-70 78 s255[m
+[31m-70 87 s256[m
+[31m-71 47 s260[m
+[31m-71 58 s261[m
+[31m-71 59 s262[m
+[31m-72 49 r88[m
+[31m-72 59 r88[m
+[31m-72 64 r88[m
+[31m-72 76 r88[m
+[31m-72 77 r88[m
+[31m-72 79 r88[m
+[31m-72 80 r88[m
+[31m-72 81 r88[m
+[31m-72 82 r88[m
+[31m-72 83 r88[m
+[31m-72 84 r88[m
+[31m-72 85 r88[m
+[31m-72 86 r88[m
+[31m-72 87 r88[m
+[31m-72 88 r88[m
+[31m-72 89 r88[m
+[31m-72 90 r88[m
+[31m-72 91 r88[m
+[31m-73 49 s263[m
+[31m-74 49 r61[m
+[31m-74 64 s264[m
+[31m-74 76 s265[m
+[31m-75 49 r64[m
+[31m-75 64 r64[m
+[31m-75 76 r64[m
+[31m-75 77 s266[m
+[31m-76 49 r66[m
+[31m-76 64 r66[m
+[31m-76 76 r66[m
+[31m-76 77 r66[m
+[31m-77 49 r68[m
+[31m-77 64 r68[m
+[31m-77 76 r68[m
+[31m-77 77 r68[m
+[31m-78 49 r70[m
+[31m-78 64 r70[m
+[31m-78 76 r70[m
+[31m-78 77 r70[m
+[31m-78 79 s54[m
+[31m-78 80 s55[m
+[31m-78 81 s56[m
+[31m-78 82 s57[m
+[31m-78 83 s58[m
+[31m-78 84 s59[m
+[31m-78 85 s60[m
+[31m-78 86 s268[m
+[31m-78 87 s269[m
+[31m-79 49 r80[m
+[31m-79 64 r80[m
+[31m-79 76 r80[m
+[31m-79 77 r80[m
+[31m-79 79 r80[m
+[31m-79 80 r80[m
+[31m-79 81 r80[m
+[31m-79 82 r80[m
+[31m-79 83 r80[m
+[31m-79 84 r80[m
+[31m-79 85 r80[m
+[31m-79 86 r80[m
+[31m-79 87 r80[m
+[31m-79 88 s270[m
+[31m-79 89 s271[m
+[31m-79 90 s272[m
+[31m-80 49 r84[m
+[31m-80 64 r84[m
+[31m-80 76 r84[m
+[31m-80 77 r84[m
+[31m-80 79 r84[m
+[31m-80 80 r84[m
+[31m-80 81 r84[m
+[31m-80 82 r84[m
+[31m-80 83 r84[m
+[31m-80 84 r84[m
+[31m-80 85 r84[m
+[31m-80 86 r84[m
+[31m-80 87 r84[m
+[31m-80 88 r84[m
+[31m-80 89 r84[m
+[31m-80 90 r84[m
+[31m-81 49 r86[m
+[31m-81 59 s273[m
+[31m-81 64 r86[m
+[31m-81 76 r86[m
+[31m-81 77 r86[m
+[31m-81 79 r86[m
+[31m-81 80 r86[m
+[31m-81 81 r86[m
+[31m-81 82 r86[m
+[31m-81 83 r86[m
+[31m-81 84 r86[m
+[31m-81 85 r86[m
+[31m-81 86 r86[m
+[31m-81 87 r86[m
+[31m-81 88 r86[m
+[31m-81 89 r86[m
+[31m-81 90 r86[m
+[31m-81 91 s274[m
+[31m-82 48 s275[m
+[31m-82 49 r91[m
+[31m-82 59 r91[m
+[31m-82 64 r91[m
+[31m-82 76 r91[m
+[31m-82 77 r91[m
+[31m-82 79 r91[m
+[31m-82 80 r91[m
+[31m-82 81 r91[m
+[31m-82 82 r91[m
+[31m-82 83 r91[m
+[31m-82 84 r91[m
+[31m-82 85 r91[m
+[31m-82 86 r91[m
+[31m-82 87 r91[m
+[31m-82 88 r91[m
+[31m-82 89 r91[m
+[31m-82 90 r91[m
+[31m-82 91 r91[m
+[31m-83 49 r92[m
+[31m-83 59 r92[m
+[31m-83 64 r92[m
+[31m-83 76 r92[m
+[31m-83 77 r92[m
+[31m-83 79 r92[m
+[31m-83 80 r92[m
+[31m-83 81 r92[m
+[31m-83 82 r92[m
+[31m-83 83 r92[m
+[31m-83 84 r92[m
+[31m-83 85 r92[m
+[31m-83 86 r92[m
+[31m-83 87 r92[m
+[31m-83 88 r92[m
+[31m-83 89 r92[m
+[31m-83 90 r92[m
+[31m-83 91 r92[m
+[31m-84 48 s276[m
+[31m-84 49 r87[m
+[31m-84 59 r87[m
+[31m-84 64 r87[m
+[31m-84 76 r87[m
+[31m-84 77 r87[m
+[31m-84 79 r87[m
+[31m-84 80 r87[m
+[31m-84 81 r87[m
+[31m-84 82 r87[m
+[31m-84 83 r87[m
+[31m-84 84 r87[m
+[31m-84 85 r87[m
+[31m-84 86 r87[m
+[31m-84 87 r87[m
+[31m-84 88 r87[m
+[31m-84 89 r87[m
+[31m-84 90 r87[m
+[31m-84 91 r87[m
+[31m-85 47 s84[m
+[31m-85 48 s85[m
+[31m-85 58 s86[m
+[31m-85 59 s87[m
+[31m-85 71 s88[m
+[31m-85 72 s89[m
+[31m-85 73 s90[m
+[31m-85 74 s91[m
+[31m-85 75 s92[m
+[31m-85 78 s93[m
+[31m-85 87 s94[m
+[31m-86 49 r59[m
+[31m-86 59 r59[m
+[31m-86 64 r59[m
+[31m-86 76 r59[m
+[31m-86 77 r59[m
+[31m-86 79 r59[m
+[31m-86 80 r59[m
+[31m-86 81 r59[m
+[31m-86 82 r59[m
+[31m-86 83 r59[m
+[31m-86 84 r59[m
+[31m-86 85 r59[m
+[31m-86 86 r59[m
+[31m-86 87 r59[m
+[31m-86 88 r59[m
+[31m-86 89 r59[m
+[31m-86 90 r59[m
+[31m-86 91 r59[m
+[31m-87 47 s110[m
+[31m-87 48 s111[m
+[31m-87 58 s112[m
+[31m-87 59 s113[m
+[31m-87 60 r98[m
+[31m-87 71 s114[m
+[31m-87 72 s115[m
+[31m-87 73 s116[m
+[31m-87 74 s117[m
+[31m-87 75 s118[m
+[31m-87 78 s119[m
+[31m-87 87 s120[m
+[31m-88 49 r55[m
+[31m-88 59 r55[m
+[31m-88 64 r55[m
+[31m-88 76 r55[m
+[31m-88 77 r55[m
+[31m-88 79 r55[m
+[31m-88 80 r55[m
+[31m-88 81 r55[m
+[31m-88 82 r55[m
+[31m-88 83 r55[m
+[31m-88 84 r55[m
+[31m-88 85 r55[m
+[31m-88 86 r55[m
+[31m-88 87 r55[m
+[31m-88 88 r55[m
+[31m-88 89 r55[m
+[31m-88 90 r55[m
+[31m-88 91 r55[m
+[31m-89 49 r56[m
+[31m-89 59 r56[m
+[31m-89 64 r56[m
+[31m-89 76 r56[m
+[31m-89 77 r56[m
+[31m-89 79 r56[m
+[31m-89 80 r56[m
+[31m-89 81 r56[m
+[31m-89 82 r56[m
+[31m-89 83 r56[m
+[31m-89 84 r56[m
+[31m-89 85 r56[m
+[31m-89 86 r56[m
+[31m-89 87 r56[m
+[31m-89 88 r56[m
+[31m-89 89 r56[m
+[31m-89 90 r56[m
+[31m-89 91 r56[m
+[31m-90 49 r57[m
+[31m-90 59 r57[m
+[31m-90 64 r57[m
+[31m-90 76 r57[m
+[31m-90 77 r57[m
+[31m-90 79 r57[m
+[31m-90 80 r57[m
+[31m-90 81 r57[m
+[31m-90 82 r57[m
+[31m-90 83 r57[m
+[31m-90 84 r57[m
+[31m-90 85 r57[m
+[31m-90 86 r57[m
+[31m-90 87 r57[m
+[31m-90 88 r57[m
+[31m-90 89 r57[m
+[31m-90 90 r57[m
+[31m-90 91 r57[m
+[31m-91 49 r58[m
+[31m-91 59 r58[m
+[31m-91 64 r58[m
+[31m-91 76 r58[m
+[31m-91 77 r58[m
+[31m-91 79 r58[m
+[31m-91 80 r58[m
+[31m-91 81 r58[m
+[31m-91 82 r58[m
+[31m-91 83 r58[m
+[31m-91 84 r58[m
+[31m-91 85 r58[m
+[31m-91 86 r58[m
+[31m-91 87 r58[m
+[31m-91 88 r58[m
+[31m-91 89 r58[m
+[31m-91 90 r58[m
+[31m-91 91 r58[m
+[31m-92 49 r60[m
+[31m-92 59 r60[m
+[31m-92 64 r60[m
+[31m-92 76 r60[m
+[31m-92 77 r60[m
+[31m-92 79 r60[m
+[31m-92 80 r60[m
+[31m-92 81 r60[m
+[31m-92 82 r60[m
+[31m-92 83 r60[m
+[31m-92 84 r60[m
+[31m-92 85 r60[m
+[31m-92 86 r60[m
+[31m-92 87 r60[m
+[31m-92 88 r60[m
+[31m-92 89 r60[m
+[31m-92 90 r60[m
+[31m-92 91 r60[m
+[31m-93 47 s84[m
+[31m-93 48 s85[m
+[31m-93 58 s86[m
+[31m-93 59 s87[m
+[31m-93 71 s88[m
+[31m-93 72 s89[m
+[31m-93 73 s90[m
+[31m-93 74 s91[m
+[31m-93 75 s92[m
+[31m-93 78 s93[m
+[31m-93 87 s94[m
+[31m-94 47 s84[m
+[31m-94 48 s85[m
+[31m-94 58 s86[m
+[31m-94 59 s87[m
+[31m-94 71 s88[m
+[31m-94 72 s89[m
+[31m-94 73 s90[m
+[31m-94 74 s91[m
+[31m-94 75 s92[m
+[31m-94 87 s94[m
+[31m-95 48 s281[m
+[31m-96 56 r88[m
+[31m-96 59 r88[m
+[31m-96 60 r88[m
+[31m-96 64 r88[m
+[31m-96 76 r88[m
+[31m-96 77 r88[m
+[31m-96 79 r88[m
+[31m-96 80 r88[m
+[31m-96 81 r88[m
+[31m-96 82 r88[m
+[31m-96 83 r88[m
+[31m-96 84 r88[m
+[31m-96 85 r88[m
+[31m-96 86 r88[m
+[31m-96 87 r88[m
+[31m-96 88 r88[m
+[31m-96 89 r88[m
+[31m-96 90 r88[m
+[31m-96 91 r88[m
+[31m-97 56 r99[m
+[31m-97 60 r99[m
+[31m-98 56 r61[m
+[31m-98 60 r61[m
+[31m-98 64 s282[m
+[31m-98 76 s283[m
+[31m-99 56 r64[m
+[31m-99 60 r64[m
+[31m-99 64 r64[m
+[31m-99 76 r64[m
+[31m-99 77 s284[m
+[31m-100 56 r66[m
+[31m-100 60 r66[m
+[31m-100 64 r66[m
+[31m-100 76 r66[m
+[31m-100 77 r66[m
+[31m-101 56 r68[m
+[31m-101 60 r68[m
+[31m-101 64 r68[m
+[31m-101 76 r68[m
+[31m-101 77 r68[m
+[31m-102 56 r70[m
+[31m-102 60 r70[m
+[31m-102 64 r70[m
+[31m-102 76 r70[m
+[31m-102 77 r70[m
+[31m-102 79 s54[m
+[31m-102 80 s55[m
+[31m-102 81 s56[m
+[31m-102 82 s57[m
+[31m-102 83 s58[m
+[31m-102 84 s59[m
+[31m-102 85 s60[m
+[31m-102 86 s286[m
+[31m-102 87 s287[m
+[31m-103 56 r80[m
+[31m-103 60 r80[m
+[31m-103 64 r80[m
+[31m-103 76 r80[m
+[31m-103 77 r80[m
+[31m-103 79 r80[m
+[31m-103 80 r80[m
+[31m-103 81 r80[m
+[31m-103 82 r80[m
+[31m-103 83 r80[m
+[31m-103 84 r80[m
+[31m-103 85 r80[m
+[31m-103 86 r80[m
+[31m-103 87 r80[m
+[31m-103 88 s288[m
+[31m-103 89 s289[m
+[31m-103 90 s290[m
+[31m-104 56 r84[m
+[31m-104 60 r84[m
+[31m-104 64 r84[m
+[31m-104 76 r84[m
+[31m-104 77 r84[m
+[31m-104 79 r84[m
+[31m-104 80 r84[m
+[31m-104 81 r84[m
+[31m-104 82 r84[m
+[31m-104 83 r84[m
+[31m-104 84 r84[m
+[31m-104 85 r84[m
+[31m-104 86 r84[m
+[31m-104 87 r84[m
+[31m-104 88 r84[m
+[31m-104 89 r84[m
+[31m-104 90 r84[m
+[31m-105 56 r86[m
+[31m-105 59 s291[m
+[31m-105 60 r86[m
+[31m-105 64 r86[m
+[31m-105 76 r86[m
+[31m-105 77 r86[m
+[31m-105 79 r86[m
+[31m-105 80 r86[m
+[31m-105 81 r86[m
+[31m-105 82 r86[m
+[31m-105 83 r86[m
+[31m-105 84 r86[m
+[31m-105 85 r86[m
+[31m-105 86 r86[m
+[31m-105 87 r86[m
+[31m-105 88 r86[m
+[31m-105 89 r86[m
+[31m-105 90 r86[m
+[31m-105 91 s292[m
+[31m-106 60 s293[m
+[31m-107 48 s294[m
+[31m-107 56 r91[m
+[31m-107 59 r91[m
+[31m-107 60 r91[m
+[31m-107 64 r91[m
+[31m-107 76 r91[m
+[31m-107 77 r91[m
+[31m-107 79 r91[m
+[31m-107 80 r91[m
+[31m-107 81 r91[m
+[31m-107 82 r91[m
+[31m-107 83 r91[m
+[31m-107 84 r91[m
+[31m-107 85 r91[m
+[31m-107 86 r91[m
+[31m-107 87 r91[m
+[31m-107 88 r91[m
+[31m-107 89 r91[m
+[31m-107 90 r91[m
+[31m-107 91 r91[m
+[31m-108 56 r92[m
+[31m-108 59 r92[m
+[31m-108 60 r92[m
+[31m-108 64 r92[m
+[31m-108 76 r92[m
+[31m-108 77 r92[m
+[31m-108 79 r92[m
+[31m-108 80 r92[m
+[31m-108 81 r92[m
+[31m-108 82 r92[m
+[31m-108 83 r92[m
+[31m-108 84 r92[m
+[31m-108 85 r92[m
+[31m-108 86 r92[m
+[31m-108 87 r92[m
+[31m-108 88 r92[m
+[31m-108 89 r92[m
+[31m-108 90 r92[m
+[31m-108 91 r92[m
+[31m-109 56 s295[m
+[31m-109 60 r97[m
+[31m-110 48 s296[m
+[31m-110 56 r87[m
+[31m-110 59 r87[m
+[31m-110 60 r87[m
+[31m-110 64 r87[m
+[31m-110 76 r87[m
+[31m-110 77 r87[m
+[31m-110 79 r87[m
+[31m-110 80 r87[m
+[31m-110 81 r87[m
+[31m-110 82 r87[m
+[31m-110 83 r87[m
+[31m-110 84 r87[m
+[31m-110 85 r87[m
+[31m-110 86 r87[m
+[31m-110 87 r87[m
+[31m-110 88 r87[m
+[31m-110 89 r87[m
+[31m-110 90 r87[m
+[31m-110 91 r87[m
+[31m-111 47 s84[m
+[31m-111 48 s85[m
+[31m-111 58 s86[m
+[31m-111 59 s87[m
+[31m-111 71 s88[m
+[31m-111 72 s89[m
+[31m-111 73 s90[m
+[31m-111 74 s91[m
+[31m-111 75 s92[m
+[31m-111 78 s93[m
+[31m-111 87 s94[m
+[31m-112 56 r59[m
+[31m-112 59 r59[m
+[31m-112 60 r59[m
+[31m-112 64 r59[m
+[31m-112 76 r59[m
+[31m-112 77 r59[m
+[31m-112 79 r59[m
+[31m-112 80 r59[m
+[31m-112 81 r59[m
+[31m-112 82 r59[m
+[31m-112 83 r59[m
+[31m-112 84 r59[m
+[31m-112 85 r59[m
+[31m-112 86 r59[m
+[31m-112 87 r59[m
+[31m-112 88 r59[m
+[31m-112 89 r59[m
+[31m-112 90 r59[m
+[31m-112 91 r59[m
+[31m-113 47 s110[m
+[31m-113 48 s111[m
+[31m-113 58 s112[m
+[31m-113 59 s113[m
+[31m-113 60 r98[m
+[31m-113 71 s114[m
+[31m-113 72 s115[m
+[31m-113 73 s116[m
+[31m-113 74 s117[m
+[31m-113 75 s118[m
+[31m-113 78 s119[m
+[31m-113 87 s120[m
+[31m-114 56 r55[m
+[31m-114 59 r55[m
+[31m-114 60 r55[m
+[31m-114 64 r55[m
+[31m-114 76 r55[m
+[31m-114 77 r55[m
+[31m-114 79 r55[m
+[31m-114 80 r55[m
+[31m-114 81 r55[m
+[31m-114 82 r55[m
+[31m-114 83 r55[m
+[31m-114 84 r55[m
+[31m-114 85 r55[m
+[31m-114 86 r55[m
+[31m-114 87 r55[m
+[31m-114 88 r55[m
+[31m-114 89 r55[m
+[31m-114 90 r55[m
+[31m-114 91 r55[m
+[31m-115 56 r56[m
+[31m-115 59 r56[m
+[31m-115 60 r56[m
+[31m-115 64 r56[m
+[31m-115 76 r56[m
+[31m-115 77 r56[m
+[31m-115 79 r56[m
+[31m-115 80 r56[m
+[31m-115 81 r56[m
+[31m-115 82 r56[m
+[31m-115 83 r56[m
+[31m-115 84 r56[m
+[31m-115 85 r56[m
+[31m-115 86 r56[m
+[31m-115 87 r56[m
+[31m-115 88 r56[m
+[31m-115 89 r56[m
+[31m-115 90 r56[m
+[31m-115 91 r56[m
+[31m-116 56 r57[m
+[31m-116 59 r57[m
+[31m-116 60 r57[m
+[31m-116 64 r57[m
+[31m-116 76 r57[m
+[31m-116 77 r57[m
+[31m-116 79 r57[m
+[31m-116 80 r57[m
+[31m-116 81 r57[m
+[31m-116 82 r57[m
+[31m-116 83 r57[m
+[31m-116 84 r57[m
+[31m-116 85 r57[m
+[31m-116 86 r57[m
+[31m-116 87 r57[m
+[31m-116 88 r57[m
+[31m-116 89 r57[m
+[31m-116 90 r57[m
+[31m-116 91 r57[m
+[31m-117 56 r58[m
+[31m-117 59 r58[m
+[31m-117 60 r58[m
+[31m-117 64 r58[m
+[31m-117 76 r58[m
+[31m-117 77 r58[m
+[31m-117 79 r58[m
+[31m-117 80 r58[m
+[31m-117 81 r58[m
+[31m-117 82 r58[m
+[31m-117 83 r58[m
+[31m-117 84 r58[m
+[31m-117 85 r58[m
+[31m-117 86 r58[m
+[31m-117 87 r58[m
+[31m-117 88 r58[m
+[31m-117 89 r58[m
+[31m-117 90 r58[m
+[31m-117 91 r58[m
+[31m-118 56 r60[m
+[31m-118 59 r60[m
+[31m-118 60 r60[m
+[31m-118 64 r60[m
+[31m-118 76 r60[m
+[31m-118 77 r60[m
+[31m-118 79 r60[m
+[31m-118 80 r60[m
+[31m-118 81 r60[m
+[31m-118 82 r60[m
+[31m-118 83 r60[m
+[31m-118 84 r60[m
+[31m-118 85 r60[m
+[31m-118 86 r60[m
+[31m-118 87 r60[m
+[31m-118 88 r60[m
+[31m-118 89 r60[m
+[31m-118 90 r60[m
+[31m-118 91 r60[m
+[31m-119 47 s110[m
+[31m-119 48 s111[m
+[31m-119 58 s112[m
+[31m-119 59 s113[m
+[31m-119 71 s114[m
+[31m-119 72 s115[m
+[31m-119 73 s116[m
+[31m-119 74 s117[m
+[31m-119 75 s118[m
+[31m-119 78 s119[m
+[31m-119 87 s120[m
+[31m-120 47 s110[m
+[31m-120 48 s111[m
+[31m-120 58 s112[m
+[31m-120 59 s113[m
+[31m-120 71 s114[m
+[31m-120 72 s115[m
+[31m-120 73 s116[m
+[31m-120 74 s117[m
+[31m-120 75 s118[m
+[31m-120 87 s120[m
+[31m-121 50 r88[m
+[31m-121 59 r88[m
+[31m-121 64 r88[m
+[31m-121 76 r88[m
+[31m-121 77 r88[m
+[31m-121 79 r88[m
+[31m-121 80 r88[m
+[31m-121 81 r88[m
+[31m-121 82 r88[m
+[31m-121 83 r88[m
+[31m-121 84 r88[m
+[31m-121 85 r88[m
+[31m-121 86 r88[m
+[31m-121 87 r88[m
+[31m-121 88 r88[m
+[31m-121 89 r88[m
+[31m-121 90 r88[m
+[31m-121 91 r88[m
+[31m-122 50 s301[m
+[31m-123 50 r61[m
+[31m-123 64 s302[m
+[31m-123 76 s303[m
+[31m-124 50 r64[m
+[31m-124 64 r64[m
+[31m-124 76 r64[m
+[31m-124 77 s304[m
+[31m-125 50 r66[m
+[31m-125 64 r66[m
+[31m-125 76 r66[m
+[31m-125 77 r66[m
+[31m-126 50 r68[m
+[31m-126 64 r68[m
+[31m-126 76 r68[m
+[31m-126 77 r68[m
+[31m-127 50 r70[m
+[31m-127 64 r70[m
+[31m-127 76 r70[m
+[31m-127 77 r70[m
+[31m-127 79 s54[m
+[31m-127 80 s55[m
+[31m-127 81 s56[m
+[31m-127 82 s57[m
+[31m-127 83 s58[m
+[31m-127 84 s59[m
+[31m-127 85 s60[m
+[31m-127 86 s306[m
+[31m-127 87 s307[m
+[31m-128 50 r80[m
+[31m-128 64 r80[m
+[31m-128 76 r80[m
+[31m-128 77 r80[m
+[31m-128 79 r80[m
+[31m-128 80 r80[m
+[31m-128 81 r80[m
+[31m-128 82 r80[m
+[31m-128 83 r80[m
+[31m-128 84 r80[m
+[31m-128 85 r80[m
+[31m-128 86 r80[m
+[31m-128 87 r80[m
+[31m-128 88 s308[m
+[31m-128 89 s309[m
+[31m-128 90 s310[m
+[31m-129 50 r84[m
+[31m-129 64 r84[m
+[31m-129 76 r84[m
+[31m-129 77 r84[m
+[31m-129 79 r84[m
+[31m-129 80 r84[m
+[31m-129 81 r84[m
+[31m-129 82 r84[m
+[31m-129 83 r84[m
+[31m-129 84 r84[m
+[31m-129 85 r84[m
+[31m-129 86 r84[m
+[31m-129 87 r84[m
+[31m-129 88 r84[m
+[31m-129 89 r84[m
+[31m-129 90 r84[m
+[31m-130 50 r86[m
+[31m-130 59 s311[m
+[31m-130 64 r86[m
+[31m-130 76 r86[m
+[31m-130 77 r86[m
+[31m-130 79 r86[m
+[31m-130 80 r86[m
+[31m-130 81 r86[m
+[31m-130 82 r86[m
+[31m-130 83 r86[m
+[31m-130 84 r86[m
+[31m-130 85 r86[m
+[31m-130 86 r86[m
+[31m-130 87 r86[m
+[31m-130 88 r86[m
+[31m-130 89 r86[m
+[31m-130 90 r86[m
+[31m-130 91 s312[m
+[31m-131 48 s313[m
+[31m-131 50 r91[m
+[31m-131 59 r91[m
+[31m-131 64 r91[m
+[31m-131 76 r91[m
+[31m-131 77 r91[m
+[31m-131 79 r91[m
+[31m-131 80 r91[m
+[31m-131 81 r91[m
+[31m-131 82 r91[m
+[31m-131 83 r91[m
+[31m-131 84 r91[m
+[31m-131 85 r91[m
+[31m-131 86 r91[m
+[31m-131 87 r91[m
+[31m-131 88 r91[m
+[31m-131 89 r91[m
+[31m-131 90 r91[m
+[31m-131 91 r91[m
+[31m-132 50 r92[m
+[31m-132 59 r92[m
+[31m-132 64 r92[m
+[31m-132 76 r92[m
+[31m-132 77 r92[m
+[31m-132 79 r92[m
+[31m-132 80 r92[m
+[31m-132 81 r92[m
+[31m-132 82 r92[m
+[31m-132 83 r92[m
+[31m-132 84 r92[m
+[31m-132 85 r92[m
+[31m-132 86 r92[m
+[31m-132 87 r92[m
+[31m-132 88 r92[m
+[31m-132 89 r92[m
+[31m-132 90 r92[m
+[31m-132 91 r92[m
+[31m-133 48 s314[m
+[31m-133 50 r87[m
+[31m-133 59 r87[m
+[31m-133 64 r87[m
+[31m-133 76 r87[m
+[31m-133 77 r87[m
+[31m-133 79 r87[m
+[31m-133 80 r87[m
+[31m-133 81 r87[m
+[31m-133 82 r87[m
+[31m-133 83 r87[m
+[31m-133 84 r87[m
+[31m-133 85 r87[m
+[31m-133 86 r87[m
+[31m-133 87 r87[m
+[31m-133 88 r87[m
+[31m-133 89 r87[m
+[31m-133 90 r87[m
+[31m-133 91 r87[m
+[31m-134 47 s84[m
+[31m-134 48 s85[m
+[31m-134 58 s86[m
+[31m-134 59 s87[m
+[31m-134 71 s88[m
+[31m-134 72 s89[m
+[31m-134 73 s90[m
+[31m-134 74 s91[m
+[31m-134 75 s92[m
+[31m-134 78 s93[m
+[31m-134 87 s94[m
+[31m-135 50 r59[m
+[31m-135 59 r59[m
+[31m-135 64 r59[m
+[31m-135 76 r59[m
+[31m-135 77 r59[m
+[31m-135 79 r59[m
+[31m-135 80 r59[m
+[31m-135 81 r59[m
+[31m-135 82 r59[m
+[31m-135 83 r59[m
+[31m-135 84 r59[m
+[31m-135 85 r59[m
+[31m-135 86 r59[m
+[31m-135 87 r59[m
+[31m-135 88 r59[m
+[31m-135 89 r59[m
+[31m-135 90 r59[m
+[31m-135 91 r59[m
+[31m-136 47 s110[m
+[31m-136 48 s111[m
+[31m-136 58 s112[m
+[31m-136 59 s113[m
+[31m-136 60 r98[m
+[31m-136 71 s114[m
+[31m-136 72 s115[m
+[31m-136 73 s116[m
+[31m-136 74 s117[m
+[31m-136 75 s118[m
+[31m-136 78 s119[m
+[31m-136 87 s120[m
+[31m-137 50 r55[m
+[31m-137 59 r55[m
+[31m-137 64 r55[m
+[31m-137 76 r55[m
+[31m-137 77 r55[m
+[31m-137 79 r55[m
+[31m-137 80 r55[m
+[31m-137 81 r55[m
+[31m-137 82 r55[m
+[31m-137 83 r55[m
+[31m-137 84 r55[m
+[31m-137 85 r55[m
+[31m-137 86 r55[m
+[31m-137 87 r55[m
+[31m-137 88 r55[m
+[31m-137 89 r55[m
+[31m-137 90 r55[m
+[31m-137 91 r55[m
+[31m-138 50 r56[m
+[31m-138 59 r56[m
+[31m-138 64 r56[m
+[31m-138 76 r56[m
+[31m-138 77 r56[m
+[31m-138 79 r56[m
+[31m-138 80 r56[m
+[31m-138 81 r56[m
+[31m-138 82 r56[m
+[31m-138 83 r56[m
+[31m-138 84 r56[m
+[31m-138 85 r56[m
+[31m-138 86 r56[m
+[31m-138 87 r56[m
+[31m-138 88 r56[m
+[31m-138 89 r56[m
+[31m-138 90 r56[m
+[31m-138 91 r56[m
+[31m-139 50 r57[m
+[31m-139 59 r57[m
+[31m-139 64 r57[m
+[31m-139 76 r57[m
+[31m-139 77 r57[m
+[31m-139 79 r57[m
+[31m-139 80 r57[m
+[31m-139 81 r57[m
+[31m-139 82 r57[m
+[31m-139 83 r57[m
+[31m-139 84 r57[m
+[31m-139 85 r57[m
+[31m-139 86 r57[m
+[31m-139 87 r57[m
+[31m-139 88 r57[m
+[31m-139 89 r57[m
+[31m-139 90 r57[m
+[31m-139 91 r57[m
+[31m-140 50 r58[m
+[31m-140 59 r58[m
+[31m-140 64 r58[m
+[31m-140 76 r58[m
+[31m-140 77 r58[m
+[31m-140 79 r58[m
+[31m-140 80 r58[m
+[31m-140 81 r58[m
+[31m-140 82 r58[m
+[31m-140 83 r58[m
+[31m-140 84 r58[m
+[31m-140 85 r58[m
+[31m-140 86 r58[m
+[31m-140 87 r58[m
+[31m-140 88 r58[m
+[31m-140 89 r58[m
+[31m-140 90 r58[m
+[31m-140 91 r58[m
+[31m-141 50 r60[m
+[3

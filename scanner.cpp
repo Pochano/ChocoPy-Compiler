@@ -4,10 +4,6 @@
 #include <unordered_map>
 #include <cctype>
 
-// --- CAMBIO: Mapeo exacto de palabras clave ---
-// Explicación: Se ajustaron los nombres en el mapa para que coincidan EXACTO 
-// con lo que escribimos en "Chocopy_Gramatica.txt". 
-// Ejemplo: "int" ahora es "IDSTRING" y "False" es "False" (no "FALSE").
 static const std::unordered_map<std::string, std::string> keywords = {
     {"False", "False"},       {"None", "None"},         {"True", "True"},
     {"and", "and"},           {"as", "as"},             {"assert", "assert"},
@@ -73,13 +69,7 @@ void Scanner::report_error(const std::string& message, int line, int col) {
     error_count++;
 }
 
-// --- CAMBIO: process_indentation ---
-
 void Scanner::process_indentation(std::vector<Token>& tokens) {
-
-    // Explicación: Python y Chocopy no usan llaves { }, usan sangrías (espacios).
-    // Aquí contamos los espacios a la izquierda de la línea.
-
     while (index_pos < sizee && at_line_start) {
         int space_count = 0;
         int temp_index = index_pos;
@@ -109,13 +99,16 @@ void Scanner::process_indentation(std::vector<Token>& tokens) {
         at_line_start = false;
 
         int current_indent = indent_stack.back();
-        // Si hay MÁS espacios que la línea anterior, entramos a un nuevo bloque -> Token INDENT
+
         if (space_count > current_indent) {
             indent_stack.push_back(space_count);
             tokens.push_back(Token("INDENT", "INDENT", line_global, col_global));
         } 
-        // Si hay MENOS espacios, salimos de uno o varios bloques -> Tokens DEDENT
         else if (space_count < current_indent) {
+            if (!tokens.empty() && tokens.back().token_name != "NEWLINE") {
+                tokens.push_back(Token("NEWLINE", "\\n", line_global, col_global));
+            }
+
             while (!indent_stack.empty() && indent_stack.back() > space_count) {
                 indent_stack.pop_back();
                 tokens.push_back(Token("DEDENT", "DEDENT", line_global, col_global));
@@ -123,10 +116,6 @@ void Scanner::process_indentation(std::vector<Token>& tokens) {
         }
     }
 }
-
-// --- CAMBIO: Símbolos exactos ---
-    // Explicación: En lugar de retornar Token("PLUS", "+"), ahora retornamos Token("+", "+").
-    // La gramática literal en txt pide los símbolos tal cual.
 
 void Scanner::scan_next_tokens(std::vector<Token>& tokens) {
     if (at_line_start) {
@@ -188,7 +177,6 @@ void Scanner::scan_next_tokens(std::vector<Token>& tokens) {
         while (index_pos < sizee && isdigit(peek_actual_char())) {
             word += get_char();
         }
-        // Debe ser INTEGER como indica la gramatica de literal
         tokens.push_back(Token("INTEGER", word, start_line, start_col));
         return;
     }
@@ -295,10 +283,6 @@ std::vector<Token> Scanner::scan() {
     while (tokens.empty() || tokens.back().token_name != "EOF") {
         scan_next_tokens(tokens);
     }
-
-// --- CAMBIO: Limpieza al final del archivo (EOF) ---
-    // Explicación: Si el archivo termina y aún hay bloques indentados abiertos,
-    // debemos mandar los DEDENT faltantes y un NEWLINE para que el parser no tire erro
 
     if (!tokens.empty() && tokens.back().token_name == "EOF") {
         Token eof_tok = tokens.back();

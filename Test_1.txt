@@ -1,35 +1,6 @@
-class Calculadora(object):
-    base: int = 2
-
-    def potencia(self: object, exp: int) -> int:
-        res: int = 1
-        i: int = 0
-        while i < exp:
-            res = res * self.base
-            i = i + 1
-        return res
-
-def procesar_datos(limite: int) -> int:
-    calc: Calculadora = None
-    total: int = 0
-    n: int = 0
-    lista: [int] = None
-    
-    calc = Calculadora()
-    lista = [1, 2, 3, 4]
-    
-    for n in lista:
-        if n > limite:
-            pass
-        elif n == limite:
-            total = total + calc.potencia(n)
-        else:
-            total = total + n
-            
-    return total
-
-def main():
-    res: int = 0
-    res = procesar_datos(3)&
-
-main()
+# comentario inicial
+x = 1   # comentario al final
+def f():
+    # comentario indentado
+        # comentario con indentación rara (no debe generar INDENT)
+    x: int = 1  # no debe romper nada

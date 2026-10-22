@@ -79,7 +79,6 @@ Grammar Grammar::fromString(const std::string& text) {
         }
         g.getOrAddSymbol(lhs, true);
 
-        // Protect || in rhs
         size_t pos = 0;
         while ((pos = rhs_all.find("||", pos)) != std::string::npos) {
             rhs_all.replace(pos, 2, "__OR__");
@@ -99,7 +98,6 @@ Grammar Grammar::fromString(const std::string& text) {
             std::string sym;
             while (ass >> sym) {
                 if (sym == "''" || sym == "ε" || sym == "EPS") {
-                    // Empty RHS
                 } else if (!sym.empty()) {
                     syms.push_back(sym);
                 }
@@ -131,7 +129,7 @@ Grammar Grammar::fromString(const std::string& text) {
     for (size_t i = 0; i < raw_rules.size(); ++i) {
         const auto& rr = raw_rules[i];
         if (i == 0 && rr.lhs == g.getSymbolName(g.goal_id)) {
-            continue; // Already added as rule 0
+            continue;
         }
         int lhs_id = g.getOrAddSymbol(rr.lhs, true);
         std::vector<int> rhs_ids;
@@ -145,7 +143,6 @@ Grammar Grammar::fromString(const std::string& text) {
         g.prods[r.lhs].push_back(r);
     }
 
-    // Determine symbol appearance order (excluding Goal)
     std::vector<int> appearance;
     auto add_app = [&](int sym_id) {
         if (sym_id == g.goal_id || sym_id == g.eps_id) return;
@@ -154,14 +151,12 @@ Grammar Grammar::fromString(const std::string& text) {
         }
     };
 
-    // First add nonterminals in order of appearance
     for (const auto& r : g.rules) {
         if (r.lhs != g.goal_id) add_app(r.lhs);
         for (int s : r.rhs) {
             if (g.nonterminal_ids.count(s)) add_app(s);
         }
     }
-    // Then add terminals in order of appearance
     for (const auto& r : g.rules) {
         for (int s : r.rhs) {
             if (g.terminal_ids.count(s)) add_app(s);
@@ -222,6 +217,62 @@ void LR1Builder::first() {
             }
             if (first_sets[A].size() > before) {
                 changed = true;
+            }
+        }
+    }
+}
+
+void LR1Builder::follow() {
+    follow_sets.clear();
+
+    for (int nt : g.nonterminal_ids) {
+        follow_sets[nt] = {};
+    }
+
+    // El símbolo inicial recibe EOF en su FOLLOW.
+    follow_sets[g.goal_id].insert(g.eof_id);
+
+    bool changed = true;
+
+    while (changed) {
+        changed = false;
+
+        for (const auto& r : g.rules) {
+            for (size_t i = 0; i < r.rhs.size(); ++i) {
+                int B = r.rhs[i];
+
+                if (!g.nonterminal_ids.count(B)) {
+                    continue;
+                }
+
+                std::vector<int> beta(
+                    r.rhs.begin() + i + 1,
+                    r.rhs.end()
+                );
+
+                std::set<int> first_beta = firstCadena(beta);
+                size_t old_size = follow_sets[B].size();
+
+                for (int symbol : first_beta) {
+                    if (symbol != g.eps_id) {
+                        follow_sets[B].insert(symbol);
+                    }
+                }
+
+                // Si beta puede producir epsilon, agregar FOLLOW(A).
+                if (beta.empty() ||
+                    first_beta.count(g.eps_id)) {
+                    std::set<int> follow_A = follow_sets[r.lhs];
+
+                    follow_sets[B].insert(
+                        follow_A.begin(),
+                        follow_A.end()
+                    );
+                }
+
+                if (follow_sets[B].size() != old_size) {
+                    changed = true;
+                }
             }
         }
     }
@@ -407,6 +458,338 @@ bool LR1Builder::llenarTablas() {
     return ok;
 }
 
+// Guarda la tabla escribiendo el NOMBRE del símbolo
+bool LR1Builder::saveTable(const std::string& filename) const {
+    std::ofstream out(filename);
+    if (!out.is_open()) return false;
+
+    out << Action.size() << "\n";
+    for (const auto& kv : Action) {
+        out << kv.first.first << " " << g.getSymbolName(kv.first.second) << " " << kv.second << "\n";
+    }
+
+    out << Goto.size() << "\n";
+    for (const auto& kv : Goto) {
+        out << kv.first.first << " " << g.getSymbolName(kv.first.second) << " " << kv.second << "\n";
+    }
+    return true;
+}
+
+// Carga mapeando el nombre al ID actual de la gramática cargada
+bool LR1Builder::loadTable(const std::string& filename) {
+    std::ifstream in(filename);
+    if (!in.is_open()) return false;
+
+    Action.clear();
+    Goto.clear();
+
+    size_t action_sz, goto_sz;
+    if (!(in >> action_sz)) return false;
+
+    for (size_t i = 0; i < action_sz; ++i) {
+        int state;
+        std::string sym_name, act;
+        in >> state >> sym_name >> act;
+        
+        auto it = g.symbol_to_id.find(sym_name);
+        if (it != g.symbol_to_id.end()) {
+            Action[{state, it->second}] = act;
+        }
+    }
+
+    if (!(in >> goto_sz)) return false;
+
+    for (size_t i = 0; i < goto_sz; ++i) {
+        int state, next_state;
+        std::string sym_name;
+        in >> state >> sym_name >> next_state;
+        
+        auto it = g.symbol_to_id.find(sym_name);
+        if (it != g.symbol_to_id.end()) {
+            Goto[{state, it->second}] = next_state;
+        }
+    }
+    return true;
+}
+
+bool LR1Builder::parseTokensWithTrace(const std::vector<Token>& tokens){
+
+    follow();
+
+    struct StackElem {
+        int state;
+        std::string symbol;
+    };
+
+    std::vector<StackElem> stack;
+    stack.push_back({0, ""});
+
+    size_t cursor = 0;
+    int step = 1;
+
+    std::cout << "\n+------+---------------------------------+----------------------+----------+\n";
+    std::cout << "| Step | Stack                           | Input                | Action   |\n";
+    std::cout << "+------+---------------------------------+----------------------+----------+\n";
+
+    auto printStackStr = [&]() {
+        std::string s = "";
+        for (const auto& elem : stack) {
+            if (!elem.symbol.empty()) s += elem.symbol + " ";
+            s += std::to_string(elem.state) + " ";
+        }
+        if (!s.empty() && s.back() == ' ') s.pop_back();
+        return s;
+    };
+
+    auto printInputStr = [&](size_t from) {
+        std::string s = "";
+        for (size_t i = from; i < tokens.size(); ++i) {
+            s += tokens[i].token_name + " ";
+        }
+        s += "$";
+        return s;
+    };
+
+    bool has_error = false;
+
+    size_t last_error_cursor = static_cast<size_t>(-1);
+    int last_error_state = -1;
+
+    while (true) {
+        int state = stack.back().state;
+        std::string curr_token = (cursor < tokens.size()) ? tokens[cursor].token_name : "EOF";
+
+        if (curr_token == "EOF") {
+            curr_token = "eof";
+        }
+
+        int sym_id = -1;
+        if (g.symbol_to_id.count(curr_token)) {
+            sym_id = g.symbol_to_id.at(curr_token);
+        } else if (g.symbol_to_id.count("ID")) {
+            // Fallback para identificadores genéricos
+            sym_id = g.symbol_to_id.at("ID");
+        }
+
+        auto it = Action.find({state, sym_id});
+        std::string act = (it != Action.end()) ? it->second : "";
+
+        std::cout << "| " << std::left << std::setw(4) << step++
+                  << " | " << std::setw(31) << printStackStr()
+                  << " | " << std::setw(20) << printInputStr(cursor)
+                  << " | " << std::setw(8) << act << " |\n";
+
+        if (act.empty()) {
+            has_error = true;
+
+            if (cursor < tokens.size()) {
+                std::cout << "\n[ERROR SINTACTICO] En linea "
+                        << tokens[cursor].line << ", columna "
+                        << tokens[cursor].col
+                        << ": Token inesperado '"
+                        << tokens[cursor].lexeme << "' (" << curr_token << ")\n";
+            } else {
+                std::cout << "\n[ERROR SINTACTICO] Fin inesperado de los tokens.\n";
+            }
+
+
+            if (cursor == last_error_cursor &&
+                state == last_error_state) {
+
+                std::cout << "[MODO PANICO] No hubo progreso. "
+                        << "Descartando el token actual.\n";
+
+                if (cursor >= tokens.size()) {
+                    return false;
+                }
+
+                cursor++;
+                last_error_cursor = static_cast<size_t>(-1);
+                last_error_state = -1;
+                continue;
+            }
+
+            last_error_cursor = cursor;
+            last_error_state = state;
+
+            std::cout << "[MODO PANICO] Buscando token de sincronizacion...\n";
+
+            int nt_decl_item = g.symbol_to_id.count("decl_item")
+                ? g.symbol_to_id.at("decl_item") : -1;
+
+            int nt_stmt = g.symbol_to_id.count("stmt")
+                ? g.symbol_to_id.at("stmt") : -1;
+
+            int nt_simple_stmt = g.symbol_to_id.count("simple_stmt")
+                ? g.symbol_to_id.at("simple_stmt") : -1;
+
+            // Construir los tokens de sincronizacion con FOLLOW.
+            std::set<std::string> sync_tokens;
+
+            auto addFollowTokens = [&](int nt) {
+                if (nt == -1) return;
+
+                auto it_follow = follow_sets.find(nt);
+                if (it_follow == follow_sets.end()) return;
+
+                for (int symbol : it_follow->second) {
+                    sync_tokens.insert(g.getSymbolName(symbol));
+                }
+            };
+
+            addFollowTokens(nt_decl_item);
+            addFollowTokens(nt_stmt);
+            addFollowTokens(nt_simple_stmt);
+
+            // 1. Descartar tokens hasta encontrar uno de sincronizacion.
+            while (cursor < tokens.size()) {
+                std::string token_name = tokens[cursor].token_name;
+
+                if (token_name == "EOF") {
+                    token_name = "eof";
+                }
+
+                if (sync_tokens.count(token_name)) {
+                    break;
+                }
+
+                std::cout << "  -> Descartando token: "
+                        << tokens[cursor].lexeme << "\n";
+
+                cursor++;
+            }
+
+            if (cursor >= tokens.size()) {
+                std::cout << "[MODO PANICO] No se encontro un token de sincronizacion.\n";
+                return false;
+            }
+
+            std::string sync_token = tokens[cursor].token_name;
+
+            if (sync_token == "EOF") {
+                sync_token = "eof";
+            }
+
+            std::cout << "  -> Token de sincronizacion encontrado: "
+                    << sync_token << "\n";
+
+            // 2. Desapilar hasta encontrar un estado que pueda
+            //    procesar el token de sincronizacion mediante ACTION.
+
+            bool recovered = false;
+
+            int sync_sym_id = -1;
+            auto sync_it = g.symbol_to_id.find(sync_token);
+
+            if (sync_it != g.symbol_to_id.end()) {
+                sync_sym_id = sync_it->second;
+            }
+
+            while (sync_sym_id != -1 && !stack.empty()) {
+                int st = stack.back().state;
+
+                // El estado puede procesar el token actual.
+                if (Action.find({st, sync_sym_id}) != Action.end()) {
+                    recovered = true;
+                    break;
+                }
+
+                // No eliminar el estado inicial.
+                if (stack.size() == 1) {
+                    break;
+                }
+
+                stack.pop_back();
+            }
+
+            if (!recovered) {
+                std::cout << "[MODO PANICO] No se encontro un estado "
+                        << "que pueda procesar el token de sincronizacion.\n";
+
+                // Descartar el token para intentar continuar.
+                if (cursor < tokens.size()) {
+                    cursor++;
+                    last_error_cursor = static_cast<size_t>(-1);
+                    last_error_state = -1;
+                    continue;
+                }
+
+                return false;
+            }
+
+            // No insertar no terminales artificiales en la pila.
+            // Tampoco consumir el token de sincronizacion.
+            std::cout << "  -> Estado recuperado: "
+                    << stack.back().state << "\n";
+
+            std::cout << "  -> Se conserva el token actual: "
+                    << sync_token << "\n";
+
+            continue;
+        }
+
+        if (act == "acc") {
+            std::cout << "+------+---------------------------------+----------------------+----------+\n";
+
+            if (has_error) {
+                std::cout << "\n>> Analisis finalizado con errores sintacticos.\n";
+            } else {
+                std::cout << "\n>> Entrada aceptada sin errores.\n";
+            }
+
+            return !has_error;
+        }
+
+        if (act[0] == 's') {
+            int next_state = std::stoi(act.substr(1));
+            stack.push_back({next_state, curr_token});
+            cursor++;
+        } else if (act[0] == 'r') {
+            int rule_id = std::stoi(act.substr(1));
+            const Rule& r = g.rules[rule_id];
+
+            for (size_t k = 0; k < r.rhs.size(); ++k) {
+                stack.pop_back();
+            }
+
+            int top_state = stack.back().state;
+            int lhs_id = r.lhs;
+            std::string lhs_name = g.getSymbolName(lhs_id);
+
+            auto git = Goto.find({top_state, lhs_id});
+            if (git != Goto.end()) {
+                int goto_state = git->second;
+                stack.push_back({goto_state, lhs_name});
+            } else {
+                std::cerr << "[ERROR CRÍTICO] Estado Goto no encontrado.\n";
+                return false;
+            }
+        }
+    }
+}
+
+void LR1Builder::printFirstTable() const {
+    std::cout << "\nFIRST table" << std::endl;
+    std::cout << "-------------------------" << std::endl;
+    std::cout << std::left << std::setw(14) << "Symbol" << " | FIRST" << std::endl;
+    std::cout << "-------------------------" << std::endl;
+
+    for (int s_id : g.symbol_appearance_order) {
+        auto it = first_sets.find(s_id);
+        if (it != first_sets.end()) {
+            std::cout << std::left << std::setw(14) << g.getSymbolName(s_id) << " | {";
+            bool f = true;
+            for (int la : it->second) {
+                if (!f) std::cout << ", ";
+                f = false;
+                std::cout << g.getSymbolName(la);
+            }
+            std::cout << "}" << std::endl;
+        }
+    }
+    std::cout << "-------------------------" << std::endl;
+}
+
 static std::string formatItemsGrouped(const Grammar& g, const std::set<Item>& items) {
     typedef std::pair<int, int> CoreKey; // rule_id, dot
     std::map<CoreKey, std::set<int>> grouped;
@@ -446,28 +829,6 @@ static std::string formatItemsGrouped(const Grammar& g, const std::set<Item>& it
     }
     result += "}";
     return result;
-}
-
-void LR1Builder::printFirstTable() const {
-    std::cout << "\nFIRST table" << std::endl;
-    std::cout << "-------------------------" << std::endl;
-    std::cout << std::left << std::setw(14) << "Symbol" << " | FIRST" << std::endl;
-    std::cout << "-------------------------" << std::endl;
-
-    for (int s_id : g.symbol_appearance_order) {
-        auto it = first_sets.find(s_id);
-        if (it != first_sets.end()) {
-            std::cout << std::left << std::setw(14) << g.getSymbolName(s_id) << " | {";
-            bool f = true;
-            for (int la : it->second) {
-                if (!f) std::cout << ", ";
-                f = false;
-                std::cout << g.getSymbolName(la);
-            }
-            std::cout << "}" << std::endl;
-        }
-    }
-    std::cout << "-------------------------" << std::endl;
 }
 
 void LR1Builder::printClosureTable() const {
@@ -537,191 +898,5 @@ void LR1Builder::printLRTable() const {
             std::cout << std::setw(6) << val;
         }
         std::cout << std::endl;
-    }
-}
-
-bool LR1Builder::saveTable(const std::string& filename) const {
-    std::ofstream out(filename);
-    if (!out.is_open()) return false;
-
-    out << Action.size() << "\n";
-    for (const auto& kv : Action) {
-        out << kv.first.first << " " << kv.first.second << " " << kv.second << "\n";
-    }
-
-    out << Goto.size() << "\n";
-    for (const auto& kv : Goto) {
-        out << kv.first.first << " " << kv.first.second << " " << kv.second << "\n";
-    }
-    return true;
-}
-
-bool LR1Builder::loadTable(const std::string& filename) {
-    std::ifstream in(filename);
-    if (!in.is_open()) return false;
-
-    Action.clear();
-    Goto.clear();
-
-    size_t action_sz, goto_sz;
-    if (!(in >> action_sz)) return false;
-
-    for (size_t i = 0; i < action_sz; ++i) {
-        int state, sym_id;
-        std::string act;
-        in >> state >> sym_id >> act;
-        Action[{state, sym_id}] = act;
-    }
-
-    if (!(in >> goto_sz)) return false;
-
-    for (size_t i = 0; i < goto_sz; ++i) {
-        int state, sym_id, next_state;
-        in >> state >> sym_id >> next_state;
-        Goto[{state, sym_id}] = next_state;
-    }
-    return true;
-}
-
-// Seguimiento paso a paso (Trace) con Modo Pánico
-bool LR1Builder::parseTokensWithTrace(const std::vector<Token>& tokens) const {
-    struct StackElem {
-        int state;
-        std::string symbol;
-    };
-
-    std::vector<StackElem> stack;
-    stack.push_back({0, ""});
-
-    size_t cursor = 0;
-    int step = 1;
-
-    std::cout << "\n+------+---------------------------------+----------------------+----------+\n";
-    std::cout << "| Step | Stack                           | Input                | Action   |\n";
-    std::cout << "+------+---------------------------------+----------------------+----------+\n";
-
-    auto printStackStr = [&]() {
-        std::string s = "";
-        for (const auto& elem : stack) {
-            if (!elem.symbol.empty()) s += elem.symbol + " ";
-            s += std::to_string(elem.state) + " ";
-        }
-        if (!s.empty() && s.back() == ' ') s.pop_back();
-        return s;
-    };
-
-    auto printInputStr = [&](size_t from) {
-        std::string s = "";
-        for (size_t i = from; i < tokens.size(); ++i) {
-            s += tokens[i].token_name + " ";
-        }
-        s += "$";
-        return s;
-    };
-
-    bool has_error = false;
-
-    while (true) {
-
-        int state = stack.back().state;
-        std::string curr_token = (cursor < tokens.size()) ? tokens[cursor].token_name : "EOF";
-
-        // Normalizamos EOF
-        if (curr_token == "EOF") {
-            curr_token = "eof";
-        }
-
-        int sym_id = g.symbol_to_id.count(curr_token) ? g.symbol_to_id.at(curr_token) : -1;
-
-        auto it = Action.find({state, sym_id});
-        std::string act = (it != Action.end()) ? it->second : "";
-
-        std::cout << "| " << std::left << std::setw(4) << step++
-                  << " | " << std::setw(31) << printStackStr()
-                  << " | " << std::setw(20) << printInputStr(cursor)
-                  << " | " << std::setw(8) << act << " |\n";
-
-        if (act.empty()) {
-            has_error = true;
-            std::cout << "\n[ERROR SINTACTICO] En linea " 
-                    << tokens[cursor].line << ", columna " << tokens[cursor].col 
-                    << ": Token inesperado '" << tokens[cursor].lexeme << "' (" << curr_token << ")\n";
-
-            // --- CAMBIO: INICIO DEL MODO PÁNICO ---
-            // Explicación: En vez de morir aquí, tratamos de recuperarnos.
-
-            std::cout << "[MODO PANICO] Limpiando pila y buscando punto de sincronizacion...\n";
-
-            // 1. Buscamos IDs de No-Terminales que sean seguros para continuar (como una sentencia entera)
-            int nt_stmt = g.symbol_to_id.count("stmt") ? g.symbol_to_id.at("stmt") : -1;
-            int nt_decl_item = g.symbol_to_id.count("decl_item") ? g.symbol_to_id.at("decl_item") : -1;
-            int nt_simple_stmt = g.symbol_to_id.count("simple_stmt") ? g.symbol_to_id.at("simple_stmt") : -1;
-
-            // 2. Desempilamos la pila (borramos lo que estábamos analizando a medias) hasta llegar a un estado donde podamos aceptar un 'stmt'
-            while (stack.size() > 1) {
-                int st = stack.back().state;
-                
-                // Verificamos si existe transicion Goto para un no-terminal de nivel superior
-                bool can_recover = (nt_stmt != -1 && Goto.find({st, nt_stmt}) != Goto.end()) ||
-                                (nt_decl_item != -1 && Goto.find({st, nt_decl_item}) != Goto.end()) ||
-                                (nt_simple_stmt != -1 && Goto.find({st, nt_simple_stmt}) != Goto.end());
-
-                if (can_recover) {
-                    break; // Encontramos un estado base limpio y seguro
-                }
-                stack.pop_back(); // Limpiamos la produccion incompleta
-            }
-
-            // 3. Ignoramos los tokens siguientes hasta encontrar un limitador lógico (Ej: salto de línea)
-            std::set<std::string> sync_tokens = {"NEWLINE", "SEMICOLON", "DEDENT", "EOF"};
-
-            while (cursor < tokens.size() && sync_tokens.find(tokens[cursor].token_name) == sync_tokens.end()) {
-                std::cout << "  -> Retrocediendo/Descartando token: " << tokens[cursor].lexeme << "\n";
-                cursor++;
-            }
-
-            if (cursor >= tokens.size() || tokens[cursor].token_name == "EOF") {
-                std::cout << "[MODO PANICO] No se pudo recuperar antes de alcanzar el final del archivo.\n";
-                return false;
-            }
-
-           // 4. Retomamos el análisis en la siguiente línea limpia
-            std::cout << "  -> Sincronizado en el token: " << tokens[cursor].token_name << "\n";
-            cursor++; // Consumir NEWLINE / DEDENT
-            continue;
-        }
-
-        if (act == "acc") {
-            std::cout << "+------+---------------------------------+----------------------+----------+\n";
-            std::cout << "\n>> Entrada ACEPTADA por el parser.\n";
-            return !has_error;
-        }
-
-        if (act[0] == 's') {
-            int next_state = std::stoi(act.substr(1));
-            stack.push_back({next_state, curr_token});
-            cursor++;
-        } else if (act[0] == 'r') {
-            int rule_id = std::stoi(act.substr(1));
-            const Rule& r = g.rules[rule_id];
-
-            for (size_t k = 0; k < r.rhs.size(); ++k) {
-                stack.pop_back();
-            }
-
-            int top_state = stack.back().state;
-            int lhs_id = r.lhs;
-            std::string lhs_name = g.getSymbolName(lhs_id);
-
-            auto git = Goto.find({top_state, lhs_id});
-            if (git != Goto.end()) {
-                int goto_state = git->second;
-
-                stack.push_back({goto_state, lhs_name});
-            } else {
-                std::cerr << "[ERROR CRÍTICO] Estado Goto no encontrado.\n";
-                return false;
-            }
-        }
     }
 }
